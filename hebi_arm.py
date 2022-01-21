@@ -18,10 +18,21 @@ class RobotArm():
   def connect(self):
     self.lookup = hebi.Lookup()
     sleep(2)
-    self.families = ['Arm', 'Arm', 'Arm', 'X5-1']  #, 'Arm'
-    self.names = ['J1_base', 'J2_shoulder', 'J3_elbow', 'X-01069']  #, 'gripperSpool'
+    self.families = ['Arm', 'Arm', 'Arm', 'Arm']  #, 'Arm''X5-1'
+    self.names = ['J1_base', 'J2_shoulder', 'J3_elbow', 'J4_wrist']  #, 'gripperSpool', X-01069
     self.group = self.lookup.get_group_from_names(self.families, self.names)
     self.group.feedback_frequency = 24
+  
+  def isConnected(self):
+    group_fbk = hebi.GroupFeedback(self.num_joints)
+    if self.group.get_next_feedback(reuse_fbk=group_fbk) is None:
+      return False
+    else: return True
+    # entries = []
+    # for entry in self.lookup.entrylist:
+    #     entries.append(entry)
+    # if entries: return True
+    # else: return False
 
   def robot_model(self):
     try:
@@ -39,6 +50,8 @@ class RobotArm():
 
   def refresh_fbk(self):
     self.group.get_next_feedback(reuse_fbk=self.group_fbk)
+    self.joint_angles = self.group_fbk.position
+    self.finger_pos = self.get_finger_position(self.joint_angles)
 
   # def feedback_handler(self):
   #   self.angles = self.group_fbk.position
@@ -80,7 +93,12 @@ class RobotArm():
       self.group.send_command(self.group_command)
 
   def keep_position(self):
-    pass
+    # while True:
+    self.refresh_fbk()
+    current_pos = self.group_fbk.position
+    self.group_command.position = current_pos
+    self.group.send_command(self.group_command)
+
 
 
 
@@ -166,7 +184,7 @@ if __name__=="__main__":
     
     loop_time = time() - last_time
     last_time=time()
-    print(loop_time)
+    # print(loop_time)
     print(target_xyz)
     # sleep(0.005)
     if keyboard.is_pressed('a'):
