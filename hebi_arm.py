@@ -50,8 +50,7 @@ class RobotArm():
 
   def refresh_fbk(self):
     self.group.get_next_feedback(reuse_fbk=self.group_fbk)
-    self.joint_angles = self.group_fbk.position
-    self.finger_pos = self.get_finger_position(self.joint_angles)
+    
 
   # def feedback_handler(self):
   #   self.angles = self.group_fbk.position
@@ -61,6 +60,11 @@ class RobotArm():
   def get_finger_position(self, joint_angles):
     
     return self.arm.get_end_effector(joint_angles)[0:3,3]
+
+  def update_end_effector(self):
+    self.refresh_fbk()
+    self.joint_angles = self.group_fbk.position
+    self.finger_pos = self.get_finger_position(self.joint_angles)
     
   def IK_solute(self, target_pos):
     self.refresh_fbk()

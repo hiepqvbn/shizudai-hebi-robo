@@ -62,9 +62,13 @@ class App:
         self.window = tk.Tk()
         self.window.title(title)
         self.robot = RobotArm()
+        # print("run time") 
+        self.init_xyz = self.robot.get_finger_position(self.robot.group_fbk.position)
+        print(type(self.init_xyz))
         self.control_stt = False
         self.is_pressed = False
         self.stt()
+        
 
     def add_sliders(self):
         feedback = self.robot.group.get_next_feedback()
@@ -105,9 +109,9 @@ class App:
     def control(self):
         # print("OK")
         self.control_stt = True
-        self.robot.update_end_effector()
-        self.target_xyz = self.robot.finger_pos
-        print(self.target_xyz)
+        # self.robot.update_end_effector()
+        
+        # print(self.target_xyz)
         # print(self.control_stt)
         tk.Label(self.window, text="Controling...").grid(row=1, column=1)
         self.begin_canvas(400, 600)
@@ -120,7 +124,7 @@ class App:
     def stt(self):
         if self.robot.isConnected():
             self.status = 'Connecting'
-            self.robot.update_end_effector()
+            # self.robot.update_end_effector()
             self.current_xyz = self.robot.finger_pos
         else:
             self.status = 'Not Connect'
@@ -184,8 +188,10 @@ class App:
         
 
     def update(self):
+        # print(self.init_xyz)
         
         self.stt()
+
         # x = self.robot.module_names.index(self.tkvar.get())
         # # print(x)
         # group_command = hebi.GroupCommand(self.robot.group.size)
@@ -209,14 +215,14 @@ class App:
         # group_command.velocity = v
         # group_command.effort = e
         # self.robot.group.send_command(group_command)
-        if self.control_stt and self.status == 'Connecting':
-            self.clear_canvas()
-            self.canvas.create_text(240,20,fill="darkblue",font="Times 20 italic bold", text=self.current_xyz)
-            self.canvas.create_text(240,50,fill="darkblue",font="Times 20 italic bold", text=self.target_xyz)
-            if not self.is_pressed:
-                # pass
-                print("loop")
-                self.robot.keep_position()
+        # if self.control_stt and self.status == 'Connecting':
+        #     self.clear_canvas()
+        #     self.canvas.create_text(240,20,fill="darkblue",font="Times 20 italic bold", text=self.current_xyz)
+        #     self.canvas.create_text(240,50,fill="darkblue",font="Times 20 italic bold", text=self.target_xyz)
+        #     if not self.is_pressed:
+        #         # pass
+        #         print("loop")
+        #         self.robot.keep_position()
 
     def clock(self):
         self.update()
