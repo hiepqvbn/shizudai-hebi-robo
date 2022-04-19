@@ -37,9 +37,11 @@ class DepthCamera:
             return False, None, None
         return True, self.depth_image, self.color_image, self.depth_frame, self.color_frame
 
+    #kyori
     def get_dist(self, point):
         return self.depth_image[point[1], point[0]]
 
+    # zahyou
     def get_coor(self, point):
         distance = self.get_dist(point)
         self.depth_intrinsics = rs.video_stream_profile(self.depth_frame.profile).get_intrinsics()
