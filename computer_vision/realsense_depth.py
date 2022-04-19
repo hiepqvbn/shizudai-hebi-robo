@@ -46,7 +46,12 @@ class DepthCamera:
         distance = self.get_dist(point)
         self.depth_intrinsics = rs.video_stream_profile(self.depth_frame.profile).get_intrinsics()
         camera_coordinate = rs.rs2_deproject_pixel_to_point(self.depth_intrinsics, [point[1],point[0]], distance)
-        return camera_coordinate
+        #unit:[mm]
+        point_xyz = []
+        point_xyz.append(camera_coordinate[1])
+        point_xyz.append(camera_coordinate[2])
+        point_xyz.append(-camera_coordinate[0])
+        return point_xyz
 
     def release(self):
         self.pipeline.stop()
