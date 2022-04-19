@@ -1,1 +1,1 @@
-# hebi-robo
+# Shizuoka University Hebi-robotics
