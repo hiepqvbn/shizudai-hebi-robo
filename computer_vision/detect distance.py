@@ -30,7 +30,7 @@ while True:
     ###############
 
     #change bgr to hsv(hue, saturation, value)
-    color_img = cv2.cvtColor(color_img,cv2.COLOR_BGR2HSV)
+    # color_img = cv2.cvtColor(color_img,cv2.COLOR_BGR2HSV)
 
     #'blue': [[128, 255, 255], [90, 50, 70]]
 
