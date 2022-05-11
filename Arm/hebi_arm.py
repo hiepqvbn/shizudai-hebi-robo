@@ -1,12 +1,17 @@
+import threading
 import hebi
 import numpy as np
 from time import sleep, time
 import keyboard
 # import grip
 
-class RobotArm():
+class RobotArm(threading.Thread):
   def __init__(self):
     # sleep(3)
+    super().__init__()
+
+  def run(self):
+    sleep(7)
     print('Robot init')
     self._isConnected = False
     self.connect()
