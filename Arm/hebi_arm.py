@@ -2,32 +2,46 @@ import hebi
 import numpy as np
 from time import sleep, time
 import keyboard
-import grip
+# import grip
 
 class RobotArm():
   def __init__(self):
+    # sleep(3)
+    print('Robot init')
+    self._isConnected = False
     self.connect()
-    self.arm = self.robot_model()
-    self.num_joints = self.group.size
-    self.group_fbk = self.robot_fbk()
-    self.joint_angles = self.group_fbk.position
-    self.finger_pos = self.get_finger_position(self.joint_angles)
-    self.group_command = hebi.GroupCommand(self.num_joints)
+    
     
 
   def connect(self):
     self.lookup = hebi.Lookup()
     sleep(2)
+    # print(self.lookup.entrylist)
+    # if self.lookup.entrylist:
+      
     self.families = ['Arm', 'Arm', 'Arm', 'Arm']  #, 'Arm''X5-1'
     self.names = ['J1_base', 'J2_shoulder', 'J3_elbow', 'J4_wrist']  #, 'gripperSpool', X-01069
     self.group = self.lookup.get_group_from_names(self.families, self.names)
-    self.group.feedback_frequency = 24
+    if self.group:
+      self._isConnected = True
+      self.group.feedback_frequency = 24
+      self.arm = self.robot_model()
+      self.num_joints = self.group.size
+      self.group_fbk = self.robot_fbk()
+      self.joint_angles = self.group_fbk.position
+      self.finger_pos = self.get_finger_position(self.joint_angles)
+      self.group_command = hebi.GroupCommand(self.num_joints)
+    else:
+      self._isConnected = False
+      print('Could not connect to HEBI robot!!!')
   
+  @property
   def isConnected(self):
-    group_fbk = hebi.GroupFeedback(self.num_joints)
-    if self.group.get_next_feedback(reuse_fbk=group_fbk) is None:
-      return False
-    else: return True
+    return self._isConnected
+    # group_fbk = hebi.GroupFeedback(self.num_joints)
+    # if self.group.get_next_feedback(reuse_fbk=group_fbk) is None:
+    #   return False
+    # else: return True
     # entries = []
     # for entry in self.lookup.entrylist:
     #     entries.append(entry)
@@ -170,49 +184,51 @@ class RobotArm():
 #   group_command.position = ik_result_joint_angles
 #   group.send_command(group_command)
 
-arm = RobotArm()
-target_xyz = arm.finger_pos
+# arm = RobotArm()
+# target_xyz = arm.finger_pos
 if __name__=="__main__":
+  arm = RobotArm()
+  print(arm.isConnected)
   # initialize()
-  last_time = time()
-  while True:
-    # group.get_next_feedback(reuse_fbk=group_feedback)
-      # # Collect events until released
+#   last_time = time()
+#   while True:
+#     # group.get_next_feedback(reuse_fbk=group_feedback)
+#       # # Collect events until released
     
-    if keyboard.is_pressed('f'):
-      grip.stt=1
-      grip.gripped(grip.stt)
-    if keyboard.is_pressed('j'):
-      grip.stt=0
-      grip.gripped(grip.stt)
+#     if keyboard.is_pressed('f'):
+#       grip.stt=1
+#       grip.gripped(grip.stt)
+#     if keyboard.is_pressed('j'):
+#       grip.stt=0
+#       grip.gripped(grip.stt)
     
-    loop_time = time() - last_time
-    last_time=time()
-    # print(loop_time)
-    print(target_xyz)
-    # sleep(0.005)
-    if keyboard.is_pressed('a'):
-      target_xyz[0] -=0.01
-      arm.make_robot_trajectory(target_xyz)
-    if keyboard.is_pressed('d'):
-      target_xyz[0] +=0.01
-      arm.make_robot_trajectory(target_xyz)
-    if keyboard.is_pressed('w'):
-      target_xyz[1] +=0.01
-      arm.make_robot_trajectory(target_xyz)
-    if keyboard.is_pressed('s'):
-      target_xyz[1] -=0.01
-      arm.make_robot_trajectory(target_xyz)
-    if keyboard.is_pressed('q'):
-      target_xyz[2] -=0.01
-      arm.make_robot_trajectory(target_xyz)
-    if keyboard.is_pressed('e'):
-      target_xyz[2] +=0.01
-      arm.make_robot_trajectory(target_xyz)
-    if keyboard.is_pressed('esc'):
-      break
-# for i in range(100):
-#   # group.send_command(group_command)
-#   # Note: the arm will go limp after the 100 ms command lifetime,
-#   # so the command is repeated every 50 ms for 5 seconds.
-#   sleep(0.05)
+#     loop_time = time() - last_time
+#     last_time=time()
+#     # print(loop_time)
+#     print(target_xyz)
+#     # sleep(0.005)
+#     if keyboard.is_pressed('a'):
+#       target_xyz[0] -=0.01
+#       arm.make_robot_trajectory(target_xyz)
+#     if keyboard.is_pressed('d'):
+#       target_xyz[0] +=0.01
+#       arm.make_robot_trajectory(target_xyz)
+#     if keyboard.is_pressed('w'):
+#       target_xyz[1] +=0.01
+#       arm.make_robot_trajectory(target_xyz)
+#     if keyboard.is_pressed('s'):
+#       target_xyz[1] -=0.01
+#       arm.make_robot_trajectory(target_xyz)
+#     if keyboard.is_pressed('q'):
+#       target_xyz[2] -=0.01
+#       arm.make_robot_trajectory(target_xyz)
+#     if keyboard.is_pressed('e'):
+#       target_xyz[2] +=0.01
+#       arm.make_robot_trajectory(target_xyz)
+#     if keyboard.is_pressed('esc'):
+#       break
+# # for i in range(100):
+# #   # group.send_command(group_command)
+# #   # Note: the arm will go limp after the 100 ms command lifetime,
+# #   # so the command is repeated every 50 ms for 5 seconds.
+# #   sleep(0.05)
