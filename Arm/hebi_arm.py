@@ -8,19 +8,22 @@ import keyboard
 class RobotArm(threading.Thread):
   def __init__(self):
     # sleep(3)
-    super().__init__()
+    self._isConnected = False
+    super(RobotArm, self).__init__()
 
   def run(self):
-    sleep(7)
-    print('Robot init')
-    self._isConnected = False
+    print('HEBI connecting...')
+    # sleep(7)
     self.connect()
     
-    
+  @property
+  def dummy(self):
+    return not self.isConnected
 
   def connect(self):
+    print('Looking for HEBI...')
     self.lookup = hebi.Lookup()
-    sleep(2)
+    # sleep(12)
     # print(self.lookup.entrylist)
     # if self.lookup.entrylist:
       
