@@ -1,3 +1,4 @@
+from enum import Enum
 import threading
 import hebi
 import numpy as np
@@ -43,6 +44,12 @@ class RobotArm(threading.Thread):
       self._isConnected = False
       print('Could not connect to HEBI robot!!!')
   
+  class Actuator(Enum):
+    J1_base = 0
+    J2_shoulder = 1
+    J3_elbow = 2
+    J4_wrist = 3
+
   @property
   def isConnected(self):
     return self._isConnected

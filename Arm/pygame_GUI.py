@@ -1,3 +1,4 @@
+from enum import Enum
 import pygame
 import time
 import multiprocessing as mp
@@ -41,7 +42,16 @@ class pygameGUI():
         
         print("GUI done")
 
+    class RobotMode(Enum):
+        POSITION = 0
+        VELOCITY = 1
+        EFFORT = 2
+
     def reset(self):
+        self.controller_mode = False
+        self.robot_mode = pygameGUI.RobotMode.POSITION
+        self.joint_l_mode = 0
+        self.joint_r_mode = 1
         self.iter = 0
         self.pressed_button = None
         self.Estop_stt = False
@@ -129,6 +139,20 @@ class pygameGUI():
         # controller_text = "Connected" if self.controller.isConnected else "Disconnect"
         controller_text = self.font.render("Controller: " + ("Connected" if self.controller.isConnected else "Disconnect"), True, BLUE1)
         self.display.blit(controller_text, [self.w/20,self.h/20])
+        #HEBI Arm connection status
+        robot_text = self.font.render("HEBI: " + ("Connected" if self.robot.isConnected else "Disconnect"), True, RED)
+        self.display.blit(robot_text, [self.w/20,self.h*2/20])
+        #MODE display
+        if self.controller.isConnected:
+            mode_text = self.font.render("MODE: " + ("End effector" if self.controller_mode else "Actuators"), True, BLUE2)
+            self.display.blit(mode_text, [self.w*12/20,self.h/20])
+            if not self.controller_mode:
+                robot_mode_text = self.font.render(self.robot_mode.name, True, BLUE2)
+                self.display.blit(robot_mode_text, [self.w*15/20,self.h*2/20])
+                joint_l_mode_text = self.font.render(str(self.joint_l_mode), True, BLUE2)
+                self.display.blit(joint_l_mode_text, [self.w*5/20,self.h*9/20])
+                joint_r_mode_text = self.font.render(str(self.joint_r_mode), True, BLUE2)
+                self.display.blit(joint_r_mode_text, [self.w*13/20,self.h*9/20])
         pygame.display.flip()
 
     def on_button_pressed(self, button):
@@ -141,7 +165,26 @@ class pygameGUI():
             self.controller.set_rumble(1.0, 1.0, 700)
         if button.name == 'button_b':
             self.controller.set_rumble(0.7, 0.7, 300)
-        
+        if button.name == 'button_trigger_r':
+            self.controller_mode = False if self.controller_mode else True
+            self.robot_mode = pygameGUI.RobotMode.POSITION if self.controller_mode else self.robot_mode  
+
+        # Actuators mode
+        if not self.controller_mode:
+            if button.name == 'button_y':
+                v=(self.robot_mode.value + 1)%len(pygameGUI.RobotMode)
+                for r in pygameGUI.RobotMode:                        
+                    self.robot_mode = r if r.value == v else self.robot_mode
+
+            if button.name == 'button_thumb_l':
+                self.joint_l_mode = (self.joint_l_mode +1)%len(self.robot.Actuator)
+                if self.joint_l_mode == self.joint_r_mode:
+                    self.joint_l_mode = (self.joint_l_mode +1)%len(self.robot.Actuator)
+            if button.name == 'button_thumb_r':
+                self.joint_r_mode = (self.joint_r_mode +1)%len(self.robot.Actuator)
+                if self.joint_r_mode == self.joint_l_mode:
+                    self.joint_r_mode = (self.joint_r_mode +1)%len(self.robot.Actuator)
+                    
 
     def on_button_released(self, button):
         print('Button {0} was released'.format(button.name))
@@ -152,7 +195,7 @@ class pygameGUI():
         print('Axis {0} moved to {1} {2}'.format(axis.name, axis.x, axis.y))
 
 
-def check():
+def main():
     gui = pygameGUI()
     while True:
         gui.step()
@@ -161,5 +204,5 @@ if __name__=="__main__":
     # gui = pygameGUI()
     # t1 = mp.(target=check)
     # t1.start()
-    check()
+    main()
     # pass
