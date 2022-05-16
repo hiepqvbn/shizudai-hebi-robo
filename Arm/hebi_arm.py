@@ -54,6 +54,11 @@ class RobotArm(threading.Thread):
     J3_elbow = 2
     J4_wrist = 3
 
+  class RobotMode(Enum):
+    POSITION = 0
+    VELOCITY = 1
+    EFFORT = 2
+
   @property
   def isConnected(self):
     return self._isConnected
@@ -93,11 +98,18 @@ class RobotArm(threading.Thread):
   #   print('x,y,z: {0}, {1}, {2}'.format(self.transform[0, 3], self.transform[1, 3], self.transform[2, 3]))
 
   def actuator_command(self, joint, mode, signal):
-    if signal <=1 or signal>= -1:
-      self.refresh_fbk()
-      
-    else:
-      print("Input signal is unvalid")
+    # if signal <=1 or signal>= -1:
+    
+    self.refresh_fbk()
+    if mode == self.RobotMode.POSITION:
+      # positions = np.zeros((self.num_joints, 2), dtype=np.float64)
+      current_pos = self.group_fbk.position
+      current_pos[joint.value] += self.AMP*signal
+      self.group_command.position = current_pos
+      self.group.send_command(self.group_command)
+
+    # else:
+    #   print("Input signal is unvalid")
 
   def get_finger_position(self, joint_angles):
     

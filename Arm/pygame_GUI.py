@@ -1,4 +1,5 @@
 from enum import Enum
+from multiprocessing.dummy import Process
 import pygame
 import time
 import multiprocessing as mp
@@ -42,14 +43,14 @@ class pygameGUI():
         
         print("GUI done")
 
-    class RobotMode(Enum):
-        POSITION = 0
-        VELOCITY = 1
-        EFFORT = 2
+    # class RobotMode(Enum):
+    #     POSITION = 0
+    #     VELOCITY = 1
+    #     EFFORT = 2
 
     def reset(self):
-        self.controller_mode = False
-        self.robot_mode = pygameGUI.RobotMode.POSITION
+        self.controller_mode = False    #Actuator ;     True is Endeffector 
+        self.robot_mode = self.robot.RobotMode.POSITION
         self.joint_l_mode = self.robot.Actuator.J1_base
         self.joint_r_mode = self.robot.Actuator.J2_shoulder
         self.iter = 0
@@ -97,6 +98,13 @@ class pygameGUI():
         
         if button:
             print("ok")
+        if self.pressed_button == 'E-Stop':
+            self._update_ui()
+            self.clock.tick(SPEED)
+            while True:
+                    if self.pressed_button == 'button_start':
+                        self.reset()
+                        break
         # 2. move
         # self._move(action) # update the head
         # self.snake.insert(0, self.head)
@@ -163,17 +171,18 @@ class pygameGUI():
         if button.name == 'button_a' and self.controller.button_trigger_l.is_pressed:
             self.pressed_button = 'E-Stop'
             self.controller.set_rumble(1.0, 1.0, 700)
+            
         if button.name == 'button_b':
             self.controller.set_rumble(0.7, 0.7, 300)
         if button.name == 'button_trigger_r':
             self.controller_mode = False if self.controller_mode else True
-            self.robot_mode = pygameGUI.RobotMode.POSITION if self.controller_mode else self.robot_mode  
+            self.robot_mode = self.robot.RobotMode.POSITION if self.controller_mode else self.robot_mode  
 
         # Actuators mode
         if not self.controller_mode:
             if button.name == 'button_y':
-                v=(self.robot_mode.value + 1)%len(pygameGUI.RobotMode)
-                for r in pygameGUI.RobotMode:                        
+                v=(self.robot_mode.value + 1)%len(self.robot.RobotMode)
+                for r in self.robot.RobotMode:                        
                     self.robot_mode = r if r.value == v else self.robot_mode
 
             if button.name == 'button_thumb_l':
@@ -201,6 +210,14 @@ class pygameGUI():
     def on_axis_moved(self, axis):
         if not (self.controller.button_thumb_l.is_pressed or self.controller.button_thumb_r.is_pressed):
             print('Axis {0} moved to {1} {2}'.format(axis.name, axis.x, axis.y))
+            if self.robot.isConnected:
+                if not self.controller_mode:
+                    if axis.name == 'axis_l':
+                        p = Process(target=self.robot.actuator_command, args=(self.joint_l_mode, self.robot_mode, axis.y))
+                        p.start()
+                    if axis.name == 'axis_r':
+                        p = Process(target=self.robot.actuator_command, args=(self.joint_r_mode, self.robot_mode, axis.y))
+                        p.start()
 
 
 def main():

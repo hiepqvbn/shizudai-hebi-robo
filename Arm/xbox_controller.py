@@ -97,6 +97,7 @@ def main():
         try:
             with controller:
                 print(controller.name)
+                # controller.button_start
 
                 #Button A events
                 controller.button_a.when_pressed = controller.on_button_pressed
