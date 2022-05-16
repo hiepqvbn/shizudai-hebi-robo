@@ -1,4 +1,5 @@
 from enum import Enum
+from logging import raiseExceptions
 import threading
 import hebi
 import numpy as np
@@ -7,6 +8,9 @@ import keyboard
 # import grip
 
 class RobotArm(threading.Thread):
+
+  AMP = 1.0
+
   def __init__(self):
     # sleep(3)
     self._isConnected = False
@@ -17,9 +21,9 @@ class RobotArm(threading.Thread):
     # sleep(7)
     self.connect()
     
-  @property
-  def dummy(self):
-    return not self.isConnected
+  # @property
+  # def dummy(self):
+  #   return not self.isConnected
 
   def connect(self):
     print('Looking for HEBI...')
@@ -53,6 +57,7 @@ class RobotArm(threading.Thread):
   @property
   def isConnected(self):
     return self._isConnected
+    
     # group_fbk = hebi.GroupFeedback(self.num_joints)
     # if self.group.get_next_feedback(reuse_fbk=group_fbk) is None:
     #   return False
@@ -74,6 +79,7 @@ class RobotArm(threading.Thread):
     group_fbk = hebi.GroupFeedback(self.num_joints)
     if self.group.get_next_feedback(reuse_fbk=group_fbk) is None:
       print("Couldn't get feedback.")
+      self._isConnected = False
       exit(1)
     return group_fbk
 
@@ -85,6 +91,13 @@ class RobotArm(threading.Thread):
   #   self.angles = self.group_fbk.position
   #   self.transform = self.arm.get_end_effector(self.angles)
   #   print('x,y,z: {0}, {1}, {2}'.format(self.transform[0, 3], self.transform[1, 3], self.transform[2, 3]))
+
+  def actuator_command(self, joint, mode, signal):
+    if signal <=1 or signal>= -1:
+      self.refresh_fbk()
+      
+    else:
+      print("Input signal is unvalid")
 
   def get_finger_position(self, joint_angles):
     

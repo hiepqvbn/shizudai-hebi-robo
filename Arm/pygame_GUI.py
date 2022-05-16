@@ -50,8 +50,8 @@ class pygameGUI():
     def reset(self):
         self.controller_mode = False
         self.robot_mode = pygameGUI.RobotMode.POSITION
-        self.joint_l_mode = 0
-        self.joint_r_mode = 1
+        self.joint_l_mode = self.robot.Actuator.J1_base
+        self.joint_r_mode = self.robot.Actuator.J2_shoulder
         self.iter = 0
         self.pressed_button = None
         self.Estop_stt = False
@@ -135,7 +135,7 @@ class pygameGUI():
         pygame.draw.rect(self.display, WHITE, pygame.Rect(self.w/20, self.h/20, self.w*9/10, self.h*9/10))
 
         text = self.font.render(self.pressed_button, True, BLUE1)
-        self.display.blit(text, [self.w/2,self.h/2])
+        self.display.blit(text, [self.w*7/20,self.h*13/20])
         # controller_text = "Connected" if self.controller.isConnected else "Disconnect"
         controller_text = self.font.render("Controller: " + ("Connected" if self.controller.isConnected else "Disconnect"), True, BLUE1)
         self.display.blit(controller_text, [self.w/20,self.h/20])
@@ -149,9 +149,9 @@ class pygameGUI():
             if not self.controller_mode:
                 robot_mode_text = self.font.render(self.robot_mode.name, True, BLUE2)
                 self.display.blit(robot_mode_text, [self.w*15/20,self.h*2/20])
-                joint_l_mode_text = self.font.render(str(self.joint_l_mode), True, BLUE2)
+                joint_l_mode_text = self.font.render(self.joint_l_mode.name, True, BLUE2)
                 self.display.blit(joint_l_mode_text, [self.w*5/20,self.h*9/20])
-                joint_r_mode_text = self.font.render(str(self.joint_r_mode), True, BLUE2)
+                joint_r_mode_text = self.font.render(self.joint_r_mode.name, True, BLUE2)
                 self.display.blit(joint_r_mode_text, [self.w*13/20,self.h*9/20])
         pygame.display.flip()
 
@@ -177,13 +177,20 @@ class pygameGUI():
                     self.robot_mode = r if r.value == v else self.robot_mode
 
             if button.name == 'button_thumb_l':
-                self.joint_l_mode = (self.joint_l_mode +1)%len(self.robot.Actuator)
-                if self.joint_l_mode == self.joint_r_mode:
-                    self.joint_l_mode = (self.joint_l_mode +1)%len(self.robot.Actuator)
+                v=(self.joint_l_mode.value +1)%len(self.robot.Actuator)
+                if v == self.joint_r_mode.value:
+                    v = (v +1)%len(self.robot.Actuator)
+                for j in self.robot.Actuator:
+                    self.joint_l_mode = j if j.value == v else self.joint_l_mode
             if button.name == 'button_thumb_r':
-                self.joint_r_mode = (self.joint_r_mode +1)%len(self.robot.Actuator)
-                if self.joint_r_mode == self.joint_l_mode:
-                    self.joint_r_mode = (self.joint_r_mode +1)%len(self.robot.Actuator)
+                v=(self.joint_r_mode.value +1)%len(self.robot.Actuator)
+                if v == self.joint_l_mode.value:
+                    v = (v +1)%len(self.robot.Actuator)
+                for j in self.robot.Actuator:
+                    self.joint_r_mode = j if j.value == v else self.joint_r_mode
+                # self.joint_r_mode = (self.joint_r_mode +1)%len(self.robot.Actuator)
+                # if self.joint_r_mode == self.joint_l_mode:
+                #     self.joint_r_mode = (self.joint_r_mode +1)%len(self.robot.Actuator)
                     
 
     def on_button_released(self, button):
@@ -192,7 +199,8 @@ class pygameGUI():
 
 
     def on_axis_moved(self, axis):
-        print('Axis {0} moved to {1} {2}'.format(axis.name, axis.x, axis.y))
+        if not (self.controller.button_thumb_l.is_pressed or self.controller.button_thumb_r.is_pressed):
+            print('Axis {0} moved to {1} {2}'.format(axis.name, axis.x, axis.y))
 
 
 def main():
