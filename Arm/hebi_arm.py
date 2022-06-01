@@ -5,21 +5,23 @@ import hebi
 import numpy as np
 from time import sleep, time
 import keyboard
+import os
 # import grip
 
-class RobotArm(threading.Thread):
+class RobotArm(object):
 
   AMP = 1.0
 
   def __init__(self):
     # sleep(3)
     self._isConnected = False
-    super(RobotArm, self).__init__()
+    # super(RobotArm, self).__init__()
 
   def run(self):
+    self.connect_th = threading.Thread(target=self.connect)
     print('HEBI connecting...')
     # sleep(7)
-    self.connect()
+    self.connect_th.start()
     
   # @property
   # def dummy(self):
@@ -28,20 +30,22 @@ class RobotArm(threading.Thread):
   def connect(self):
     print('Looking for HEBI...')
     self.lookup = hebi.Lookup()
-    # sleep(12)
+    sleep(0.1)
     # print(self.lookup.entrylist)
     # if self.lookup.entrylist:
       
-    self.families = ['Arm', 'Arm', 'Arm', 'Arm']  #, 'Arm''X5-1'
-    self.names = ['J1_base', 'J2_shoulder', 'J3_elbow', 'J4_wrist']  #, 'gripperSpool', X-01069
+    self.families = ['Arm', 'Arm', 'Arm', 'Arm', 'Arm']  #, 'Arm''X5-1'
+    self.names = ['J1_base', 'J2_shoulder', 'J3_elbow', 'J4_wrist1', 'J5_wrist2']  #, 'gripperSpool', X-01069
     self.group = self.lookup.get_group_from_names(self.families, self.names)
     if self.group:
       self._isConnected = True
       self.group.feedback_frequency = 24
       self.arm = self.robot_model()
       self.num_joints = self.group.size
+      # print(self.num_joints)
       self.group_fbk = self.robot_fbk()
       self.joint_angles = self.group_fbk.position
+      # print(self.joint_angles)
       self.finger_pos = self.get_finger_position(self.joint_angles)
       self.group_command = hebi.GroupCommand(self.num_joints)
     else:
@@ -52,7 +56,8 @@ class RobotArm(threading.Thread):
     J1_base = 0
     J2_shoulder = 1
     J3_elbow = 2
-    J4_wrist = 3
+    J4_wrist1 = 3
+    J5_wrist2 = 4
 
   class RobotMode(Enum):
     POSITION = 0
@@ -75,7 +80,8 @@ class RobotArm(threading.Thread):
 
   def robot_model(self):
     try:
-      return hebi.robot_model.import_from_hrdf("A-2085-04G.hrdf")
+      dir = os.path.abspath( os.path.dirname( __file__ ) )
+      return hebi.robot_model.import_from_hrdf(os.path.join(dir,"A-2085-05.hrdf"))
     except:
       print("Could not load HRDF.")
       exit(1)
@@ -89,7 +95,12 @@ class RobotArm(threading.Thread):
     return group_fbk
 
   def refresh_fbk(self):
-    self.group.get_next_feedback(reuse_fbk=self.group_fbk)
+    groupfb = self.group.get_next_feedback(reuse_fbk=self.group_fbk)
+    print(groupfb)
+    if groupfb is None:
+      print("Couldn't get feedback.")
+      self._isConnected = False
+      # exit(1)
     
 
   # def feedback_handler(self):
@@ -228,6 +239,7 @@ class RobotArm(threading.Thread):
 # target_xyz = arm.finger_pos
 if __name__=="__main__":
   arm = RobotArm()
+  arm.run()
   print(arm.isConnected)
   # initialize()
 #   last_time = time()

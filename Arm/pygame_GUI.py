@@ -23,7 +23,8 @@ class pygameGUI():
         self.h = h
         # super(pygameGUI, self).__init__()
         self.robot = RobotArm()
-        self.robot.start()
+        self.robot.run()
+        # print("check here")
         self.controller = Controller()
         if self.controller.hasBeenConnected:
             self._set_controller_func()
@@ -95,6 +96,12 @@ class pygameGUI():
                 self._set_controller_func()
                 # time.sleep(10)
                 self.controller.set_rumble(0.8, 0.8, 1500)
+
+        if not self.robot.isConnected:
+            if not self.robot.connect_th.is_alive():
+                self.robot.run()
+
+        # print('robot thread is {}'.format(self.robot.is_alive()))
         
         if button:
             print("ok")
