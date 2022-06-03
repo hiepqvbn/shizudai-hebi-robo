@@ -1,5 +1,7 @@
 from enum import Enum
-from multiprocessing.dummy import Process
+import math
+from queue import Queue
+from collections import namedtuple
 import pygame
 import time
 import multiprocessing as mp
@@ -8,6 +10,10 @@ from hebi_arm import RobotArm
 from xbox_controller import Controller
 
 SPEED = 40
+
+RobotEvent = namedtuple(
+    'Robot',['is_pause']
+)
 
 WHITE = (255, 255, 255)
 RED = (200,0,0)
@@ -22,8 +28,11 @@ class pygameGUI():
         self.w = w
         self.h = h
         # super(pygameGUI, self).__init__()
-        self.robot = RobotArm()
-        self.robot.run()
+
+        self.robot_com_queue = Queue()
+        self.robot_event = threading.Event()
+        self.robot = RobotArm(self.robot_com_queue, self.robot_event)
+        self.robot.start()
         # print("check here")
         self.controller = Controller()
         if self.controller.hasBeenConnected:
@@ -65,7 +74,7 @@ class pygameGUI():
         for axis in [self.controller.axis_l, self.controller.axis_r]:
             axis.when_moved = self.on_axis_moved
         
-
+    #loop here
     def step(self, button=None):
         # print('GUI step')
         # self.frame_iteration += 1
@@ -76,67 +85,34 @@ class pygameGUI():
                 quit()
         # if self.controller.get_event():
         #     print("this ",self.controller.get_event())
-        if self.controller.isConnected:
-            # print('controller is connected')
-            # with self.controller as c:
-                # print('in with')
-            pass
-                # if 1:
-                #     print('this ok ')
-                # if c.button_a.is_pressed:
-                #         print('Button A')
-            # if event.type == pygame.KEYDOWN:
-            #     if event.key == pygame.K_a:
-            #         pygame.quit()
-            #         quit()
-        else:
-            # print('controller is not connected')
+        if not self.controller.isConnected:
             self.controller.recheck()
             if self.controller.isConnected:
                 self._set_controller_func()
-                # time.sleep(10)
                 self.controller.set_rumble(0.8, 0.8, 1500)
 
         if not self.robot.isConnected:
-            if not self.robot.connect_th.is_alive():
-                self.robot.run()
+            if not self.robot.is_alive():
+                self.robot.start()
 
         # print('robot thread is {}'.format(self.robot.is_alive()))
         
-        if button:
-            print("ok")
+        # if button:
+        #     print("ok")
         if self.pressed_button == 'E-Stop':
             self._update_ui()
             self.clock.tick(SPEED)
             while True:
-                    if self.pressed_button == 'button_start':
-                        self.reset()
-                        break
-        # 2. move
-        # self._move(action) # update the head
-        # self.snake.insert(0, self.head)
+                if self.pressed_button == 'button_start':
+                    self.reset()
+                    self.send_robot('reset')
+                    break
         
-        # 3. check if game over
-        # reward = 0
-        # game_over = False
-        # if self.is_collision() or self.frame_iteration > 100*len(self.snake):
-        #     game_over = True
-        #     reward = -10
-        #     return reward, game_over, self.score
-
-        # 4. place new food or just move
-        # if self.head == self.food:
-        #     self.score += 1
-        #     reward = 10
-        #     self._place_food()
-        # else:
-        #     self.snake.pop()
-        
-        # 5. update ui and clock
+        # update ui and clock
         self.iter += 1
         self._update_ui()
         self.clock.tick(SPEED)
-        # 6. return game over and score
+       
 
     def _update_ui(self):
         
@@ -170,6 +146,10 @@ class pygameGUI():
                 self.display.blit(joint_r_mode_text, [self.w*13/20,self.h*9/20])
         pygame.display.flip()
 
+    def send_robot(self, mes):
+        self.robot_com_queue.put(mes)
+        self.robot_event.set()
+        
     def on_button_pressed(self, button):
         
         print('Button {0} was pressed'.format(button.name))
@@ -177,6 +157,7 @@ class pygameGUI():
 
         if button.name == 'button_a' and self.controller.button_trigger_l.is_pressed:
             self.pressed_button = 'E-Stop'
+            self.send_robot('pause')
             self.controller.set_rumble(1.0, 1.0, 700)
             
         if button.name == 'button_b':
@@ -187,27 +168,29 @@ class pygameGUI():
 
         # Actuators mode
         if not self.controller_mode:
+            #switch between position, velocity, effort(easy-version: only control position)
             if button.name == 'button_y':
                 v=(self.robot_mode.value + 1)%len(self.robot.RobotMode)
                 for r in self.robot.RobotMode:                        
                     self.robot_mode = r if r.value == v else self.robot_mode
-
+            #choose the actuator for left thumb
             if button.name == 'button_thumb_l':
                 v=(self.joint_l_mode.value +1)%len(self.robot.Actuator)
                 if v == self.joint_r_mode.value:
                     v = (v +1)%len(self.robot.Actuator)
                 for j in self.robot.Actuator:
                     self.joint_l_mode = j if j.value == v else self.joint_l_mode
+            #choose the actuator for right thumn
             if button.name == 'button_thumb_r':
                 v=(self.joint_r_mode.value +1)%len(self.robot.Actuator)
                 if v == self.joint_l_mode.value:
                     v = (v +1)%len(self.robot.Actuator)
                 for j in self.robot.Actuator:
                     self.joint_r_mode = j if j.value == v else self.joint_r_mode
-                # self.joint_r_mode = (self.joint_r_mode +1)%len(self.robot.Actuator)
-                # if self.joint_r_mode == self.joint_l_mode:
-                #     self.joint_r_mode = (self.joint_r_mode +1)%len(self.robot.Actuator)
-                    
+                
+        #End-effector mode(Inverse kimetic)    
+        if self.controller_mode:
+            pass        
 
     def on_button_released(self, button):
         print('Button {0} was released'.format(button.name))
@@ -219,12 +202,11 @@ class pygameGUI():
             print('Axis {0} moved to {1} {2}'.format(axis.name, axis.x, axis.y))
             if self.robot.isConnected:
                 if not self.controller_mode:
+                    angle = math.atan2(axis.x, axis.y)
                     if axis.name == 'axis_l':
-                        p = Process(target=self.robot.actuator_command, args=(self.joint_l_mode, self.robot_mode, axis.y))
-                        p.start()
+                        self.send_robot((self.controller_mode, self.robot_mode, self.joint_l_mode, angle))
                     if axis.name == 'axis_r':
-                        p = Process(target=self.robot.actuator_command, args=(self.joint_r_mode, self.robot_mode, axis.y))
-                        p.start()
+                        self.send_robot((self.controller_mode, self.robot_mode, self.joint_r_mode, angle))
 
 
 def main():

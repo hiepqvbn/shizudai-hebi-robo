@@ -8,43 +8,70 @@ import keyboard
 import os
 # import grip
 
-class RobotArm(object):
+class RobotArm(threading.Thread):
 
   AMP = 1.0
+  SPEED = 0.1   #set actuator's speed as constant 0.1 rad/s
+  EPS = 0.01 
 
-  def __init__(self):
+  def __init__(self, queue=None, event=None):
     # sleep(3)
+    self.gui_queue = queue
+    self.gui_event = event
     self._isConnected = False
-    # super(RobotArm, self).__init__()
+    super(RobotArm, self).__init__()
 
   def run(self):
-    self.connect_th = threading.Thread(target=self.connect)
-    print('HEBI connecting...')
-    # sleep(7)
-    self.connect_th.start()
+    self.connect()
+    if self.isConnected:  #connected to robot --> run below command in other thread
+      self.target_position = self.joint_angles
+      while True: #run a loop
+        # self.connect_th = threading.Thread(target=self.connect)
+        # print('HEBI connecting...')
+        # sleep(7)
+        # self.connect_th.start()
+        gui_mes = self.get_event(self.gui_event)
+        if gui_mes is None:
+          #current postion and target position is almost equal
+          if np.all(np.absolute(self.target_position-self.joint_angles)<self.EPS):
+            self.keep_position()
+          else:
+            self.reach_position(self.target_position)
+        else:
+          if gui_mes == 'pause':
+            self.cancel_all_command()
+            while not gui_mes == 'reset':
+              gui_mes = self.get_event(self.gui_event)
+            continue
+
+          #robot controller mode is each actuator
+          if not gui_mes[0]:
+            #set position for robot arm
+            if gui_mes[1] == self.RobotMode: 
+              self.target_position[gui_mes[2].value] = gui_mes[3]
+              
     
-  # @property
-  # def dummy(self):
-  #   return not self.isConnected
+    #else: couldn't connect to robot --> thread done
+    
 
   def connect(self):
     print('Looking for HEBI...')
     self.lookup = hebi.Lookup()
-    sleep(0.1)
-    # print(self.lookup.entrylist)
-    # if self.lookup.entrylist:
-      
+    sleep(0.1) #wait for look-up hebi(stable)
+
+    # Modules selection 
     self.families = ['Arm', 'Arm', 'Arm', 'Arm', 'Arm']  #, 'Arm''X5-1'
     self.names = ['J1_base', 'J2_shoulder', 'J3_elbow', 'J4_wrist1', 'J5_wrist2']  #, 'gripperSpool', X-01069
     self.group = self.lookup.get_group_from_names(self.families, self.names)
+
     if self.group:
       self._isConnected = True
-      self.group.feedback_frequency = 24
+      self.group.feedback_frequency = 24 #feedback refresh frequency is 24Hz
       self.arm = self.robot_model()
       self.num_joints = self.group.size
       # print(self.num_joints)
       self.group_fbk = self.robot_fbk()
-      self.joint_angles = self.group_fbk.position
+      self.joint_angles = self.group_fbk.position #get positions of each actuator at the first time to avoid suddenly move(dangerous)
       # print(self.joint_angles)
       self.finger_pos = self.get_finger_position(self.joint_angles)
       self.group_command = hebi.GroupCommand(self.num_joints)
@@ -64,20 +91,13 @@ class RobotArm(object):
     VELOCITY = 1
     EFFORT = 2
 
-  @property
+  #only check for the first time connect so make sure the robot connect all the time.
+  #if after that robot is disconnect then we need to reset the program
+  @property   
   def isConnected(self):
     return self._isConnected
     
-    # group_fbk = hebi.GroupFeedback(self.num_joints)
-    # if self.group.get_next_feedback(reuse_fbk=group_fbk) is None:
-    #   return False
-    # else: return True
-    # entries = []
-    # for entry in self.lookup.entrylist:
-    #     entries.append(entry)
-    # if entries: return True
-    # else: return False
-
+    
   def robot_model(self):
     try:
       dir = os.path.abspath( os.path.dirname( __file__ ) )
@@ -94,19 +114,35 @@ class RobotArm(object):
       exit(1)
     return group_fbk
 
-  def refresh_fbk(self):
-    groupfb = self.group.get_next_feedback(reuse_fbk=self.group_fbk)
-    print(groupfb)
-    if groupfb is None:
-      print("Couldn't get feedback.")
+  def refresh_fbk(self,duration=10):
+    #control the rate of func = the group feedback frequency
+    #if cannot get the feedback in duration(default=10s) --> robot is disconnected
+    start_time = time()
+    while (time()-start_time)<duration:
+      fbk = self.group_fbk
+      self.group_fbk = self.group.get_next_feedback(reuse_fbk=self.group_fbk)
+      if self.group_fbk is None:
+        self.group_fbk = fbk
+        continue
+      else:
+        break
+    if self.group_fbk is None:
       self._isConnected = False
-      # exit(1)
+      print("HEBI disconnected!!!")
+    
     
 
   # def feedback_handler(self):
   #   self.angles = self.group_fbk.position
   #   self.transform = self.arm.get_end_effector(self.angles)
   #   print('x,y,z: {0}, {1}, {2}'.format(self.transform[0, 3], self.transform[1, 3], self.transform[2, 3]))
+
+  def get_event(self, e):
+    event_is_set = e.wait(0.1)
+    if event_is_set:
+      return self.gui_queue.get()
+    else:
+      return
 
   def actuator_command(self, joint, mode, signal):
     # if signal <=1 or signal>= -1:
@@ -161,13 +197,28 @@ class RobotArm(object):
       self.group_command.velocity = vel
       self.group.send_command(self.group_command)
 
+  def cancel_all_command(self):
+    self.group_command.position[:] = np.nan
+    self.group_command.velocity[:] = np.nan
+    self.group_command.effort[:] = np.nan
+    self.group.send_command(self.group_command)
+
   def keep_position(self):
     # while True:
     self.refresh_fbk()
-    current_pos = self.group_fbk.position
-    self.group_command.position = current_pos
+    self.joint_angles = self.group_fbk.position   #update self.joint_angles
+    self.group_command.position = self.joint_angles
+
     self.group.send_command(self.group_command)
 
+  def reach_position(self, target, speed=SPEED):
+    # while True:
+    self.refresh_fbk()
+    self.joint_angles = self.group_fbk.position   #update self.joint_angles
+    next_position = np.where(np.absolute(target - self.joint_angles)<self.EPS,0,speed*(target - self.joint_angles)/np.absolute(target - self.joint_angles))
+    self.group_command.velocity = next_position
+    
+    self.group.send_command(self.group_command)
 
 
 
