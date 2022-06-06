@@ -91,9 +91,9 @@ class pygameGUI():
                 self._set_controller_func()
                 self.controller.set_rumble(0.8, 0.8, 1500)
 
-        if not self.robot.isConnected:
-            if not self.robot.is_alive():
-                self.robot.start()
+        # if not self.robot.isConnected:
+        #     if not self.robot.is_alive():
+        #         self.robot.start()
 
         # print('robot thread is {}'.format(self.robot.is_alive()))
         
@@ -147,19 +147,25 @@ class pygameGUI():
         pygame.display.flip()
 
     def send_robot(self, mes):
+        # if self.robot_com_queue.empty():
         self.robot_com_queue.put(mes)
+        time.sleep(0.01)
         self.robot_event.set()
         
     def on_button_pressed(self, button):
         
-        print('Button {0} was pressed'.format(button.name))
+        # print('Button {0} was pressed'.format(button.name))
         self.pressed_button = button.name
 
         if button.name == 'button_a' and self.controller.button_trigger_l.is_pressed:
             self.pressed_button = 'E-Stop'
+            exit(1)
             self.send_robot('pause')
             self.controller.set_rumble(1.0, 1.0, 700)
             
+        if button.name == 'button_x':
+            self.send_robot = 'set'
+
         if button.name == 'button_b':
             self.controller.set_rumble(0.7, 0.7, 300)
         if button.name == 'button_trigger_r':
@@ -193,20 +199,22 @@ class pygameGUI():
             pass        
 
     def on_button_released(self, button):
-        print('Button {0} was released'.format(button.name))
+        # print('Button {0} was released'.format(button.name))
         self.pressed_button = None
 
 
     def on_axis_moved(self, axis):
         if not (self.controller.button_thumb_l.is_pressed or self.controller.button_thumb_r.is_pressed):
-            print('Axis {0} moved to {1} {2}'.format(axis.name, axis.x, axis.y))
+            # print('Axis {0} moved to {1} {2}'.format(axis.name, axis.x, axis.y))
             if self.robot.isConnected:
                 if not self.controller_mode:
                     angle = math.atan2(axis.x, axis.y)
+                    # print("angle of jointstick is {}".format(angle))
+                    # if self.controller.button_x.is_pressed:
                     if axis.name == 'axis_l':
-                        self.send_robot((self.controller_mode, self.robot_mode, self.joint_l_mode, angle))
+                        self.send_robot((self.controller_mode, self.robot_mode, self.joint_l_mode, axis.x))
                     if axis.name == 'axis_r':
-                        self.send_robot((self.controller_mode, self.robot_mode, self.joint_r_mode, angle))
+                        self.send_robot((self.controller_mode, self.robot_mode, self.joint_r_mode, axis.y))
 
 
 def main():

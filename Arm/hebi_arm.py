@@ -11,7 +11,7 @@ import os
 class RobotArm(threading.Thread):
 
   AMP = 1.0
-  SPEED = 0.1   #set actuator's speed as constant 0.1 rad/s
+  SPEED = 0.005   #set actuator's speed as constant 0.1 rad/s
   EPS = 0.01 
 
   def __init__(self, queue=None, event=None):
@@ -24,32 +24,73 @@ class RobotArm(threading.Thread):
   def run(self):
     self.connect()
     if self.isConnected:  #connected to robot --> run below command in other thread
+      print("HEBI connected!!")
       self.target_position = self.joint_angles
+      self.vel = 0
+      self.mode = None
+      # c = 0
       while True: #run a loop
         # self.connect_th = threading.Thread(target=self.connect)
         # print('HEBI connecting...')
         # sleep(7)
         # self.connect_th.start()
+        # print(c)
         gui_mes = self.get_event(self.gui_event)
         if gui_mes is None:
-          #current postion and target position is almost equal
-          if np.all(np.absolute(self.target_position-self.joint_angles)<self.EPS):
-            self.keep_position()
-          else:
-            self.reach_position(self.target_position)
+          if self.vel == 0: 
+            self.keep_position(self.joint_angles)
+            print("current position {}".format(self.joint_angles))
+          else: 
+            self.joint_angles[self.mode] += self.vel*self.SPEED
+            self.group_command.position=self.joint_angles
+            # print(self.group_command.velocity)
+            self.group.send_command(self.group_command)
+          # current postion and target position is almost equal
+          
         else:
+          print(gui_mes)
+          if gui_mes == 'set':
+            self.refresh_fbk()
+            self.joint_angles = self.group_fbk.position
+
           if gui_mes == 'pause':
             self.cancel_all_command()
             while not gui_mes == 'reset':
               gui_mes = self.get_event(self.gui_event)
+            print(gui_mes)
             continue
 
           #robot controller mode is each actuator
           if not gui_mes[0]:
             #set position for robot arm
-            if gui_mes[1] == self.RobotMode: 
-              self.target_position[gui_mes[2].value] = gui_mes[3]
+            if gui_mes[1] == self.RobotMode.POSITION: 
+              # c+=1
+              # self.vel[gui_mes[2].value] = gui_mes[3]*self.SPEED
+              # if np.all(np.absolute(self.vel)<0.3*self.SPEED):
+              #   self.vel = np.zeros(self.num_joints)
+              #   self.refresh_fbk()
+              #   self.joint_angles = self.group_fbk.position
+              self.vel = gui_mes[3]
+              self.mode=gui_mes[2].value
+              print(self.vel)
+              if np.abs(self.vel)<0.9:
+                self.vel = 0
+              self.joint_angles[self.mode] += self.vel*self.SPEED
+              self.group_command.position=self.joint_angles
+              # print(self.group_command.velocity)
+              self.group.send_command(self.group_command)
+
               
+              # self.target_position[gui_mes[2].value] = gui_mes[3]
+              # # print("target position {}".format(self.target_position))
+              # if np.all(np.absolute(self.target_position-self.joint_angles)<self.EPS):
+              #   self.joint_angles = self.target_position
+              #   self.keep_position(self.joint_angles)
+              # else:
+              #   self.reach_position(self.target_position)
+            # self.group_command.velocity=np.zeros(self.num_joints)
+            # self.group.send_command(self.group_command)
+          
     
     #else: couldn't connect to robot --> thread done
     
@@ -72,7 +113,7 @@ class RobotArm(threading.Thread):
       # print(self.num_joints)
       self.group_fbk = self.robot_fbk()
       self.joint_angles = self.group_fbk.position #get positions of each actuator at the first time to avoid suddenly move(dangerous)
-      # print(self.joint_angles)
+      print("position is {}".format(type(self.joint_angles)))
       self.finger_pos = self.get_finger_position(self.joint_angles)
       self.group_command = hebi.GroupCommand(self.num_joints)
     else:
@@ -138,8 +179,10 @@ class RobotArm(threading.Thread):
   #   print('x,y,z: {0}, {1}, {2}'.format(self.transform[0, 3], self.transform[1, 3], self.transform[2, 3]))
 
   def get_event(self, e):
-    event_is_set = e.wait(0.1)
-    if event_is_set:
+    # event_is_set = e.wait(0.01)
+    # e.clear()
+    sleep(0.01)
+    if not self.gui_queue.empty():
       return self.gui_queue.get()
     else:
       return
@@ -203,11 +246,11 @@ class RobotArm(threading.Thread):
     self.group_command.effort[:] = np.nan
     self.group.send_command(self.group_command)
 
-  def keep_position(self):
+  def keep_position(self, position):
     # while True:
-    self.refresh_fbk()
-    self.joint_angles = self.group_fbk.position   #update self.joint_angles
-    self.group_command.position = self.joint_angles
+    # self.refresh_fbk()
+    # self.joint_angles = self.group_fbk.position   #update self.joint_angles
+    self.group_command.position = position
 
     self.group.send_command(self.group_command)
 
