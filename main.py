@@ -29,9 +29,12 @@ def collect_data():
         print(collect.log_df.head())
         print("Done")
         
+if len(argvs)>1:
+    if argvs[1] == 'gui':
+        GUI()
 
-if argvs[1] == 'gui':
+    if argvs[1] == 'collect_data':
+        collect_data()
+
+if __name__=='__main__':
     GUI()
-
-if argvs[1] == 'collect_data':
-    collect_data()
