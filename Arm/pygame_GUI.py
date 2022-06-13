@@ -6,8 +6,8 @@ import pygame
 import time
 import multiprocessing as mp
 import threading
-from hebi_arm import RobotArm
-from xbox_controller import Controller
+from Arm.hebi_arm import RobotArm
+from Arm.xbox_controller import Controller
 
 SPEED = 40
 

@@ -3,7 +3,9 @@ import pandas as pd
 
 from datetime import date, datetime
 
-class Data_Collect(object):
+class DataCollect(object):
+
+    col=pd.Series(['timestamp', 'theta', 'camera'])
 
     def __init__(self) -> None:
         
@@ -12,14 +14,16 @@ class Data_Collect(object):
 
         #load csv file as pandas dataframe
         try:    
-            self.log_fr = pd.read_csv(self.csv_filename)
-            print(self.log_fr)
-            print((self.log_fr.columns == ['theta','camera']).all())
-            if not (self.log_fr.columns == ['theta','camera']).all():   ##bug here
-                print("ok")
-                self.log_fr = self.make_new_dataframe()
+            self.log_df = pd.read_csv(self.csv_filename)
+            # print(self.log_df)
+            # print((self.log_df.columns == ['theta','camera']).all())
+            if not (self.log_df.columns == self.col).all():   ##bug here
+                # print("ok")
+                self.log_df = self.make_new_dataframe()
         except:     #if data file haven't made, make as an empty csv
-            self.log_fr = self.make_new_dataframe()
+            self.log_df = self.make_new_dataframe()
+        finally:
+            self.log_df = self.log_df.set_index('timestamp')
 
     
     def make_new_dataframe(self):
@@ -29,24 +33,29 @@ class Data_Collect(object):
                  |      |      |      |   |        |        |
         """
         # timestamp_series = pd.Series()
-        col=pd.Series(['timestamp', 'theta', 'camera'])
-        dt_fr = pd.DataFrame(columns=col)
-        dt_fr = dt_fr.set_index('timestamp')
+        
+        dt_fr = pd.DataFrame(columns=self.col)
+        
+        # print((dt_fr.columns == ['theta','camera']).all())
         return dt_fr
 
     def get_now(self):
         return str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
     def write_data(self, dt):
-        print(self.log_fr)
-        self.log_fr.loc[self.get_now()] = dt
+        # print(self.log_df)
+        
+        self.log_df.loc[self.get_now()] = dt
 
     def save_dataframe(self):
-        print(self.log_fr)
-        self.log_fr.to_csv(self.csv_filename)
+        # print(self.log_df)
+        self.log_df.to_csv(self.csv_filename)
+
+    def clear_csv(self):
+        self.make_new_dataframe().set_index('timestamp').to_csv(self.csv_filename)
 
 def main():
-    dt = Data_Collect()
+    dt = DataCollect()
     dt.write_data([33,59])
     dt.save_dataframe()
 
