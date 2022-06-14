@@ -35,11 +35,12 @@ class RobotArm(threading.Thread):
         # sleep(7)
         # self.connect_th.start()
         # print(c)
+        self.refresh_fbk()
         gui_mes = self.get_event(self.gui_event)
         if gui_mes is None:
           if self.vel == 0: 
             self.keep_position(self.joint_angles)
-            print("current position {}".format(self.joint_angles))
+            # print("current position {}".format(self.joint_angles))
           else: 
             self.joint_angles[self.mode] += self.vel*self.SPEED
             self.group_command.position=self.joint_angles
