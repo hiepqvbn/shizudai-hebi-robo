@@ -5,13 +5,13 @@ from datetime import date, datetime
 
 class DataCollect(object):
 
-    col=pd.Series(['timestamp', 'theta', 'camera'])
+    col=pd.Series(['timestamp'])
 
-    def __init__(self) -> None:
+    def __init__(self, cols=[]) -> None:
         
         #csv file name = datalog+today.csv
         self.csv_filename = 'datalog/datalog{}.csv'.format(date.today())
-
+        self.col = pd.concat([self.col,pd.Series(cols)], ignore_index=True)
         #load csv file as pandas dataframe
         try:    
             self.log_df = pd.read_csv(self.csv_filename)
@@ -42,7 +42,7 @@ class DataCollect(object):
     def get_now(self):
         return str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
-    def write_data(self, dt):
+    def write_data_to_dataframe(self, dt):
         # print(self.log_df)
         
         self.log_df.loc[self.get_now()] = dt
@@ -51,12 +51,16 @@ class DataCollect(object):
         # print(self.log_df)
         self.log_df.to_csv(self.csv_filename)
 
+    def write_data_to_csv(self, dt):
+        self.write_data_to_dataframe(dt)
+        self.save_dataframe()
+
     def clear_csv(self):
         self.make_new_dataframe().set_index('timestamp').to_csv(self.csv_filename)
 
 def main():
     dt = DataCollect()
-    dt.write_data([33,59])
+    dt.write_data_to_dataframe([33,59])
     dt.save_dataframe()
 
 

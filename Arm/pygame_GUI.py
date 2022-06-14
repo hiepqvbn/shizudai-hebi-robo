@@ -159,15 +159,16 @@ class pygameGUI():
 
         if button.name == 'button_a' and self.controller.button_trigger_l.is_pressed:
             self.pressed_button = 'E-Stop'
+            self.controller.set_rumble(1.0, 1.0, 100)
             exit(1)
             self.send_robot('pause')
-            self.controller.set_rumble(1.0, 1.0, 700)
+            
             
         if button.name == 'button_x':
             self.send_robot = 'set'
 
-        if button.name == 'button_b':
-            self.controller.set_rumble(0.7, 0.7, 300)
+        # if button.name == 'button_b':
+        #     self.controller.set_rumble(0.7, 0.7, 300)
         if button.name == 'button_trigger_r':
             self.controller_mode = False if self.controller_mode else True
             self.robot_mode = self.robot.RobotMode.POSITION if self.controller_mode else self.robot_mode  
