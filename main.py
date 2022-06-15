@@ -49,7 +49,7 @@ def main():
             super().on_button_pressed(button)
             if button.name == 'button_b':
                 self.controller.set_rumble(0.7, 0.7, 300)
-                print(self.robot.group_fbk.position)
+                # print(self.robot.group_fbk.position)
                 collect.write_data_to_csv(self.robot.group_fbk.position)
 
     pyGUI = mainGUI()

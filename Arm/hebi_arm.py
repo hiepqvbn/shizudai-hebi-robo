@@ -22,22 +22,25 @@ class RobotArm(threading.Thread):
     super(RobotArm, self).__init__()
 
   def run(self):
+    #HEBI Robot Thread
+
+    #Connect to HEBI
     self.connect()
+
+    #HEBI Connected situation
     if self.isConnected:  #connected to robot --> run below command in other thread
       print("HEBI connected!!")
       self.target_position = self.joint_angles
       self.vel = 0
       self.mode = None
-      # c = 0
-      while True: #run a loop
-        # self.connect_th = threading.Thread(target=self.connect)
-        # print('HEBI connecting...')
-        # sleep(7)
-        # self.connect_th.start()
-        # print(c)
-        self.refresh_fbk()
+      
+
+      while True: #Run a loop --- Main program for HEBI is HERE
+
+        self.refresh_fbk()  #Need to refresh feedback every loop to get update feedback(position, velocity, effort)
         gui_mes = self.get_event(self.gui_event)
-        if gui_mes is None:
+
+        if gui_mes is None: #No event from controller
           if self.vel == 0: 
             self.keep_position(self.joint_angles)
             # print("current position {}".format(self.joint_angles))
@@ -48,7 +51,7 @@ class RobotArm(threading.Thread):
             self.group.send_command(self.group_command)
           # current postion and target position is almost equal
           
-        else:
+        else: #Some buttons is pressed
           print(gui_mes)
           if gui_mes == 'set':
             self.refresh_fbk()
@@ -78,7 +81,6 @@ class RobotArm(threading.Thread):
                 self.vel = 0
               self.joint_angles[self.mode] += self.vel*self.SPEED
               self.group_command.position=self.joint_angles
-              # print(self.group_command.velocity)
               self.group.send_command(self.group_command)
 
               
@@ -97,6 +99,9 @@ class RobotArm(threading.Thread):
     
 
   def connect(self):
+    '''
+    Look up HEBI then initialize group, feedback etc.
+    '''
     print('Looking for HEBI...')
     self.lookup = hebi.Lookup()
     sleep(0.1) #wait for look-up hebi(stable)
@@ -141,9 +146,13 @@ class RobotArm(threading.Thread):
     
     
   def robot_model(self):
+    """
+    make HEBI model from hrdf file for kinematics/inverse-kinematics function
+    """
+    hrdf_filename = "A-2085-05.hrdf"
     try:
       dir = os.path.abspath( os.path.dirname( __file__ ) )
-      return hebi.robot_model.import_from_hrdf(os.path.join(dir,"A-2085-05.hrdf"))
+      return hebi.robot_model.import_from_hrdf(os.path.join(dir,hrdf_filename))
     except:
       print("Could not load HRDF.")
       exit(1)
@@ -156,9 +165,12 @@ class RobotArm(threading.Thread):
       exit(1)
     return group_fbk
 
-  def refresh_fbk(self,duration=10):
-    #control the rate of func = the group feedback frequency
-    #if cannot get the feedback in duration(default=10s) --> robot is disconnected
+  def refresh_fbk(self,duration=5):
+    """
+    Control the rate of func = the group feedback frequency\n
+    If cannot get the feedback in duration(default=5s) --> robot is disconnected
+    """
+    
     start_time = time()
     while (time()-start_time)<duration:
       fbk = self.group_fbk
@@ -248,9 +260,9 @@ class RobotArm(threading.Thread):
     self.group.send_command(self.group_command)
 
   def keep_position(self, position):
-    # while True:
-    # self.refresh_fbk()
-    # self.joint_angles = self.group_fbk.position   #update self.joint_angles
+    """
+    Keep position of HEBI stable
+    """
     self.group_command.position = position
 
     self.group.send_command(self.group_command)
