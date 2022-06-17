@@ -181,17 +181,24 @@ class pygameGUI():
                 for r in self.robot.RobotMode:                        
                     self.robot_mode = r if r.value == v else self.robot_mode
             #choose the actuator for left thumb
+            ###option 1:    fix left joystick for only J1_base
             if button.name == 'button_thumb_l':
-                v=(self.joint_l_mode.value +1)%len(self.robot.Actuator)
-                if v == self.joint_r_mode.value:
-                    v = (v +1)%len(self.robot.Actuator)
-                for j in self.robot.Actuator:
-                    self.joint_l_mode = j if j.value == v else self.joint_l_mode
-            #choose the actuator for right thumn
+                #########################################################
+                # v=(self.joint_l_mode.value +1)%len(self.robot.Actuator)
+                # if v == self.joint_r_mode.value:
+                #     v = (v +1)%len(self.robot.Actuator)
+                # for j in self.robot.Actuator:
+                #     self.joint_l_mode = j if j.value == v else self.joint_l_mode
+                #########################################################
+                pass
+            #choose the actuator for right thumb
+            ###option 1:    set right joystick for only 2 mode
             if button.name == 'button_thumb_r':
-                v=(self.joint_r_mode.value +1)%len(self.robot.Actuator)
-                if v == self.joint_l_mode.value:
-                    v = (v +1)%len(self.robot.Actuator)
+                #v=(self.joint_r_mode.value +1)%len(self.robot.Actuator)
+                # if v == self.joint_l_mode.value:
+                #     v = (v +1)%len(self.robot.Actuator)
+                
+                v=(self.joint_r_mode.value +1)%2 + 1 # v in {1,2}
                 for j in self.robot.Actuator:
                     self.joint_r_mode = j if j.value == v else self.joint_r_mode
                 
