@@ -198,7 +198,7 @@ class pygameGUI():
                 # if v == self.joint_l_mode.value:
                 #     v = (v +1)%len(self.robot.Actuator)
                 
-                v=(self.joint_r_mode.value +1)%2 + 1 # v in {1,2}
+                v = 2 if self.joint_r_mode.value == 1 else 1 # v in {1,2}
                 for j in self.robot.Actuator:
                     self.joint_r_mode = j if j.value == v else self.joint_r_mode
                 
@@ -212,8 +212,12 @@ class pygameGUI():
 
 
     def on_axis_moved(self, axis):
-        if not (self.controller.button_thumb_l.is_pressed or self.controller.button_thumb_r.is_pressed):
-            # print('Axis {0} moved to {1} {2}'.format(axis.name, axis.x, axis.y))
+        #run on the same thread with controller
+        # print('Axis {0} moved to {1} {2}'.format(axis.name, axis.x, axis.y))
+        # print(threading.currentThread())
+        # print(self.controller._event_thread)
+        # print(math.sqrt(axis.x**2+axis.y**2))
+        if not (self.controller.button_thumb_l.is_pressed or self.controller.button_thumb_r.is_pressed): 
             if self.robot.isConnected:
                 if not self.controller_mode:
                     angle = math.atan2(axis.x, axis.y)
