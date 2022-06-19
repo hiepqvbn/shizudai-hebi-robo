@@ -10,12 +10,16 @@ import os
 
 class RobotArm(threading.Thread):
 
+  families = ['Arm', 'Arm', 'Arm', 'Arm', 'Arm']  #, 'Arm''X5-1'
+  names = ['J1_base', 'J2_shoulder', 'J3_elbow', 'J4_wrist1', 'J5_wrist2']  #, 'gripperSpool', X-01069
+
+
   AMP = 1.0
   SPEED = 0.01   #set actuator's speed as constant 0.1 rad/s
   EPS = 0.01 
   LIMIT_POSITION = {
     "J1_base": {"max":None, "min":None},
-    "J2_shoulder": {"max":None, "min":None},
+    "J2_shoulder": {"max":2.75, "min":-0.25},
     "J3_elbow": {"max":None, "min":None},
   }
 
@@ -47,7 +51,7 @@ class RobotArm(threading.Thread):
 
         # Send command every loop
         self.update_joint_angles(self.vel, self.mode)
-        self.joint_angles[self.mode] += self.vel*self.SPEED
+        # self.joint_angles[self.mode] += self.vel*self.SPEED
         self.set_arm_position(self.joint_angles)
 
         # Check Controller Message            
@@ -72,7 +76,7 @@ class RobotArm(threading.Thread):
             if gui_mes[1] == self.RobotMode.POSITION:             
               self.vel = gui_mes[3]
               self.mode=gui_mes[2]
-              print(self.vel)
+              # print(self.vel)
               if np.abs(self.vel)<0.8:
                 self.vel = 0
 
@@ -89,8 +93,6 @@ class RobotArm(threading.Thread):
     sleep(0.1) #wait for look-up hebi(stable)
 
     # Modules selection 
-    self.families = ['Arm', 'Arm', 'Arm', 'Arm', 'Arm']  #, 'Arm''X5-1'
-    self.names = ['J1_base', 'J2_shoulder', 'J3_elbow', 'J4_wrist1', 'J5_wrist2']  #, 'gripperSpool', X-01069
     self.group = self.lookup.get_group_from_names(self.families, self.names)
 
     if self.group:
@@ -101,7 +103,7 @@ class RobotArm(threading.Thread):
       # print(self.num_joints)
       self.group_fbk = self.robot_fbk()
       self.joint_angles = self.group_fbk.position #get positions of each actuator at the first time to avoid suddenly move(dangerous)
-      print("position is {}".format(type(self.joint_angles)))
+      # print("position is {}".format(type(self.joint_angles)))
       self.finger_pos = self.get_finger_position(self.joint_angles)
       self.group_command = hebi.GroupCommand(self.num_joints)
     else:
@@ -162,7 +164,7 @@ class RobotArm(threading.Thread):
         continue
       else:
         break
-    print("Refresh time is {}".format(time()-start_time))
+    # print("Refresh time is {}".format(time()-start_time))
     if self.group_fbk is None:
       self._isConnected = False
       print("HEBI disconnected!!!")
@@ -244,13 +246,14 @@ class RobotArm(threading.Thread):
     self.group.send_command(self.group_command)
 
   def update_joint_angles(self, vel, mode):
-    self.joint_angles[mode.value] += vel*self.SPEED
-    if self.LIMIT_POSITION[mode]["min"]: #not None
-      if self.joint_angles[mode.value]<self.LIMIT_POSITION[mode]["min"]:
-        self.joint_angles[mode.value]=self.LIMIT_POSITION[mode]["min"]
-    if self.LIMIT_POSITION[mode]["max"]: #not None
-      if self.joint_angles[mode.value]>self.LIMIT_POSITION[mode]["max"]:
-        self.joint_angles[mode.value]=self.LIMIT_POSITION[mode]["max"]
+    if mode:
+      self.joint_angles[mode.value] += vel*self.SPEED
+      if self.LIMIT_POSITION[mode.name]["min"]: #not None
+        if self.joint_angles[mode.value]<self.LIMIT_POSITION[mode.name]["min"]:
+          self.joint_angles[mode.value]=self.LIMIT_POSITION[mode.name]["min"]
+      if self.LIMIT_POSITION[mode.name]["max"]: #not None
+        if self.joint_angles[mode.value]>self.LIMIT_POSITION[mode.name]["max"]:
+          self.joint_angles[mode.value]=self.LIMIT_POSITION[mode.name]["max"]
 
   def set_arm_position(self, position):
     """
