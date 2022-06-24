@@ -58,5 +58,5 @@ def main():
         pyGUI.step()
     
 
-if __name__=='__main__':
+if len(argvs)==1 and __name__=='__main__':
     main()
