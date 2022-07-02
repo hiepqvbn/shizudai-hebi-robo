@@ -37,8 +37,10 @@ if len(argvs)>1:
         collect_data()
 
 def main():
+    import threading
     from Arm import pygame_GUI
     from data_collect import data_collect
+    from computer_vision import realsense_depth, detect_blue_mark
 
     class mainGUI(pygame_GUI.pygameGUI):
         def __init__(self, w=640, h=480) -> None:
@@ -52,8 +54,13 @@ def main():
                 # print(self.robot.group_fbk.position)
                 collect.write_data_to_csv(self.robot.group_fbk.position)
 
+    # detect_blue_mark.main()
     pyGUI = mainGUI()
     collect = data_collect.DataCollect(cols=pyGUI.robot.names)
+    
+    camera_thread = threading.Thread(target=detect_blue_mark.main, args=())
+    camera_thread.start()
+    # rc = realsense_depth.DepthCamera()
     while True:
         pyGUI.step()
     

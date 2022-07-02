@@ -24,7 +24,7 @@ BLACK = (0,0,0)
 pygame.init()
 
 class pygameGUI():
-    def __init__(self, w=640, h=480) -> None:
+    def __init__(self, w=640, h=480, camera=None) -> None:
         self.w = w
         self.h = h
         # super(pygameGUI, self).__init__()
