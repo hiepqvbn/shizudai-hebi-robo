@@ -8,6 +8,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import pathlib
 from sklearn.decomposition import PCA
 # from matplotlib.mlab import PCA as mlabPCA
+from time import sleep, time
 
 
 class GridPoint(object):
@@ -16,6 +17,10 @@ class GridPoint(object):
         self._j = j
         self._C_pos = C_pos #position of grid point in C-space np.array([theta1, theta2, theta3])
         self._es = unit_vector
+
+    def project_high(self, pos):
+        print('do here line 22')
+        print(self.pos)
 
     @property
     def i(self):
@@ -28,6 +33,10 @@ class GridPoint(object):
     @property
     def index(self):
         return (self.i, self.j)
+
+    @property
+    def pos(self):
+        return self._C_pos
 
     @property
     def e1(self):
@@ -57,35 +66,84 @@ class Grid(object):
         self.pca_result=pd.DataFrame(self.pca.transform(data), columns=data.columns)
         self.comps = self.pca.components_
 
-        self.make_init_grids()
+        self.make_init_grid()
+        self.make_numpy_grid()
 
-    def index(self, i, j):  #grid point at index i,j <phi(i,j)> with i, j belong to Z (integer)
-        if j<0:
-            return self.grid[2][-i][-j] if i<0 else self.grid[3][i][-j] # third descartes quadrant or forth descartes quadrant
-        else:
-            return self.grid[1][-i][j] if i<0 else self.grid[1][i][j] # second descartes quadrant or first descartes quadrant
+
+    def draw(self, ax, should_show_center_point=True, should_show_pca=True):
+        
+        if should_show_center_point:
+            ax.plot(self.basepoint[0],self.basepoint[1],self.basepoint[2], 'rx')
+        if should_show_pca:
+            for i, (comp, var) in enumerate(zip(self.pca.components_, self.pca.explained_variance_)):
+        
+                comp = comp * var  # scale component by its variance explanation power
+        
+                ax.plot(
+                    [self.basepoint[0], self.basepoint[0]+comp[0]*(i**5+5)],
+                    [self.basepoint[1], self.basepoint[1]+comp[1]*(i**5+5)],
+                    [self.basepoint[2], self.basepoint[2]+comp[2]*(i**5+5)],
+                    label=f"Component {i}",
+                    linewidth=2,
+                    color=f"C{i + 2}",
+                )
+        # for i in range(self.N):
+        #     for j in range(self.N):
+        #         self.fig.scatter(self.index(i,j).pos[0],self.index(i,j).pos[1],self.index(i,j).pos[2], s=0.8)
+        #         self.fig.scatter(self.index(-i,j).pos[0],self.index(-i,j).pos[1],self.index(-i,j).pos[2], s=0.8)
+        #         self.fig.scatter(self.index(-i,-j).pos[0],self.index(-i,-j).pos[1],self.index(-i,-j).pos[2], s=0.8)
+        #         self.fig.scatter(self.index(i,-j).pos[0],self.index(i,-j).pos[1],self.index(i,-j).pos[2], s=0.8)
+
+        #         if t:
+        #             plt.pause(t)
+        ax.scatter(self.np_grid[:,:,0],self.np_grid[:,:,1],self.np_grid[:,:,2], s=0.8)
+
+
+
+    def index(self, i, j, start='center'):  #grid point at index i,j <phi(i,j)> with i, j belong to Z (integer)
+        """
+        default: start='center'\n
+        switch to start='bottom-left' to start index from bottom left
+        """
+        if start=='center':
+            if j<0:
+                return self.grid[2][-i][-j] if i<0 else self.grid[3][i][-j] # third descartes quadrant or forth descartes quadrant
+            else:
+                return self.grid[1][-i][j] if i<0 else self.grid[0][i][j] # second descartes quadrant or first descartes quadrant
+        elif start=='bottom-left':
+            i=i+1-self.N
+            j=j+1-self.N
+            return self.index(i,j)
+
+
+    def make_numpy_grid(self):
+        self.np_grid = np.empty((self.N*2-1,self.N*2-1,3))
+        for i in range(self.N*2 - 1):
+            for j in range(self.N*2-1):
+                self.np_grid[i,j]=self.index(i+1-self.N, j+1-self.N).pos
 
     def make_init_grid(self):
         self.grid = [[],[],[],[]]
-        for grid in self.grid:
-            grid.append(GridPoint(0,0,self.basepoint,self.comps))
-        for i in range(1,self.N):
-            for j in range(1,self.N):
-                self.grid[0].append(GridPoint(i,j,self.get_C_pos(i,j),self.comps))
-                self.grid[1].append(GridPoint(-i,j,self.get_C_pos(-i,j),self.comps))
-                self.grid[2].append(GridPoint(-i,-j,self.get_C_pos(-i,-j),self.comps))
-                self.grid[3].append(GridPoint(i,-j,self.get_C_pos(i,-j),self.comps))
         
-        for k in range(4):
-            for i in range(len(self.grids[k])):
-                self.grid[k][i][0] = self.basepoint + i*self.comps[0]*self.width if k%2==0 else self.basepoint - i*self.comps[0]*self.width
-                for j in range(len(self.grids[k][i])):
-                    self.grid[k][i][j] = self.grids[k][i][0] + j*self.comps[1]*self.width if k<2 else self.grids[k][i][0] - j*self.comps[1]*self.width
+        for i in range(self.N):
+            for grid in self.grid:
+                grid.append([])
+            for j in range(self.N):
+                self.grid[0][i].append(GridPoint(i,j,self.get_C_pos(i,j),self.comps))
+                self.grid[1][i].append(GridPoint(-i,j,self.get_C_pos(-i,j),self.comps))
+                self.grid[2][i].append(GridPoint(-i,-j,self.get_C_pos(-i,-j),self.comps))
+                self.grid[3][i].append(GridPoint(i,-j,self.get_C_pos(i,-j),self.comps))
         
     def get_C_pos(self,i,j):
-        prev_i_point = self.index()
-        prev_j_point = self.index()
-        c_pos = 0
+        if (i,j)==(0,0):
+            c_pos = self.basepoint
+        else:
+            if j==0:
+                prev_i_point = self.index(i-1,0) if i>0 else self.index(i+1,0) #if i<0
+                c_pos = prev_i_point.pos + self.width*prev_i_point.e1 if i>0 else prev_i_point.pos - self.width*prev_i_point.e1
+            else:
+                prev_j_point = self.index(i,j-1) if j>0 else self.index(i,j+1) #if j<0
+                c_pos = prev_j_point.pos + self.width*prev_j_point.e2 if j>0 else prev_j_point.pos - self.width*prev_j_point.e2
         return c_pos
 
     def get_center(self, data):
@@ -93,6 +151,10 @@ class Grid(object):
         y = data['J2_shoulder']
         z = data['J3_elbow']
         return np.array([np.mean(x), np.mean(y), np.mean(z)])
+
+    @property
+    def size(self):
+        return self.N*2-1
 
 
 
@@ -108,15 +170,36 @@ class DataVisual():
             # print(self.C_points.head(3))
             self.S = self.covariance_matrix(self.nor_C_points)
             # print(self.S)
+            self.grid = Grid(self.C_points,N=4)
+
+            self.whereis = pd.DataFrame(index=self.C_points.index,columns=['Position', 'NearestGrid'])
+            for i in range(len(self.C_points)):
+                pos = np.array([self.C_points['J1_base'].iloc[i],self.C_points['J2_shoulder'].iloc[i],self.C_points['J3_elbow'].iloc[i]])
+                self.whereis['Position'].iloc[i]=pos
+
+            # print(self.whereis.head(5))
+            
+            self.find_gridpoint_of_data()
+
+        
+    def find_gridpoint_of_data(self):
+        for index in range(len(self.whereis)):
+            data_pos = self.whereis['Position'].iloc[index]
+            grid_distance = np.zeros((self.grid.size,self.grid.size))
+            for i in range(self.grid.size):
+                for j in range(self.grid.size):
+                    grid_distance[i,j] = self.grid.index(i,j,start='bottom-left').project_high(data_pos) 
+
+            self.whereis['NearestGrid']=0
 
             
 
     def scatter_plot3D(self, data, should_show_center_point=True):
-        pca = PCA(n_components=3)
-        pca.fit(data)
-        result=pd.DataFrame(pca.transform(data), columns=data.columns)
+        # pca = PCA(n_components=3)
+        # pca.fit(data)
+        # result=pd.DataFrame(pca.transform(data), columns=data.columns)
         
-
+        
 
         self.fig = plt.figure(figsize=(12, 9))
         self.ax = Axes3D(self.fig)
@@ -132,11 +215,14 @@ class DataVisual():
         self.ax.set_ylim([0,3])
         self.ax.set_zlim([-2,1])
 
+        
+        self.grid.draw(ax=self.ax)
 
-        if should_show_center_point:
-            self.base_point = np.array([np.mean(x), np.mean(y), np.mean(z)])
-            # print(self.base_point)
-            self.ax.plot([np.mean(x)],[np.mean(y)],[np.mean(z)], 'rx')
+
+        # if should_show_center_point:
+        #     self.base_point = np.array([np.mean(x), np.mean(y), np.mean(z)])
+        #     # print(self.base_point)
+            
 
         # make simple, bare axis lines through space:
         # xAxisLine = ((min(x), max(x)), (0, 0), (0,0))
@@ -146,24 +232,12 @@ class DataVisual():
         # zAxisLine = ((0, 0), (0,0), (min(z), max(z)))
         # self.ax.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'r')
         
-        self.comps = []
-        for i, (comp, var) in enumerate(zip(pca.components_, pca.explained_variance_)):
-            # print(np.linalg.norm(comp))
-            self.comps.append(comp)
-            comp = comp * var  # scale component by its variance explanation power
-            
-            self.ax.plot(
-                [np.mean(x), np.mean(x)+comp[0]*(i**5+5)],
-                [np.mean(y), np.mean(y)+comp[1]*(i**5+5)],
-                [np.mean(z), np.mean(z)+comp[2]*(i**5+5)],
-                label=f"Component {i}",
-                linewidth=2,
-                color=f"C{i + 2}",
-            )
+        # self.comps = []
         
-        self.make_grid(self.base_point, self.comps)
-        for grids in self.grids:
-            self.ax.scatter(grids[:,:,0],grids[:,:,1],grids[:,:,2], s=0.8)
+        
+        # self.make_grid(self.base_point, self.comps)
+        # for grids in self.grids:
+        #     self.ax.scatter(grids[:,:,0],grids[:,:,1],grids[:,:,2], s=0.8)
 
         # for i in range(len(self.C_points)-1):
         #     self.match2points(i, i+1)
