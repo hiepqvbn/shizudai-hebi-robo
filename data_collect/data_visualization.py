@@ -19,8 +19,15 @@ class GridPoint(object):
         self._es = unit_vector
 
     def project_high(self, pos):
-        print('do here line 22')
-        print(self.pos)
+        return np.abs(np.dot(self.e3,(pos-self.pos)))
+
+    def is_point_in_grid(self, pos):
+        if np.dot(self.e1,(pos-self.pos))<0: 
+            return False
+        elif np.dot(self.e2,(pos-self.pos))<0:
+            return False
+        else:
+            return True
 
     @property
     def i(self):
@@ -65,6 +72,7 @@ class Grid(object):
         self.pca.fit(self.data)
         self.pca_result=pd.DataFrame(self.pca.transform(data), columns=data.columns)
         self.comps = self.pca.components_
+        self.vars = self.pca.explained_variance_
 
         self.make_init_grid()
         self.make_numpy_grid()
@@ -188,7 +196,16 @@ class DataVisual():
             grid_distance = np.zeros((self.grid.size,self.grid.size))
             for i in range(self.grid.size):
                 for j in range(self.grid.size):
-                    grid_distance[i,j] = self.grid.index(i,j,start='bottom-left').project_high(data_pos) 
+                    if self.grid.index(i,j,start='bottom-left').is_point_in_grid(data_pos):
+                        try:
+                            if not(self.grid.index(i+1,j,start='bottom-left').is_point_in_grid(data_pos) or self.grid.index(i,j+1,start='bottom-left').is_point_in_grid(data_pos) or self.grid.index(i+1,j+1,start='bottom-left').is_point_in_grid(data_pos)):
+                                print("{} {}".format(i,j))
+                                break
+                        except: ## TODO need exception fix here
+                            break
+                else:
+                    continue
+                break
 
             self.whereis['NearestGrid']=0
 
