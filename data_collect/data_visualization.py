@@ -10,6 +10,7 @@ from sklearn.decomposition import PCA
 # from matplotlib.mlab import PCA as mlabPCA
 from time import sleep, time
 
+N=10    #->grid size = 2N-1
 
 class GridPoint(object):
     def __init__(self, i, j, C_pos, unit_vector) -> None:
@@ -17,6 +18,8 @@ class GridPoint(object):
         self._j = j
         self._C_pos = C_pos #position of grid point in C-space np.array([theta1, theta2, theta3])
         self._es = unit_vector
+        self._samples = []
+        self._around_samples = []
 
     def project_high(self, pos):
         return np.abs(np.dot(self.e3,(pos-self.pos)))
@@ -28,6 +31,29 @@ class GridPoint(object):
             return False
         else:
             return True
+    
+    def draw_samples(self, fig):
+        np_samples = np.array(self._samples)
+        print(np_samples)
+        if np_samples.size != 0:
+            fig.plot(np_samples[:,0],np_samples[:,1],np_samples[:,2], 'yo')
+
+    @property
+    def around_samples(self):
+        return self._around_samples
+
+    def set_around_samples(self, samples):
+        self._around_samples.extend(samples)
+
+    @property
+    def samples(self):
+        return self._samples
+
+    def append_to_samples(self, point):
+        self._samples.append(point)
+
+    def reset_samples(self):
+        self._samples = []
 
     @property
     def i(self):
@@ -59,10 +85,10 @@ class GridPoint(object):
 
 
 class Grid(object):
-    def __init__(self, data, basepoint=None, width=0.2, N=10) -> None:
+    def __init__(self, data, basepoint=None, N=10) -> None:
         self.data = data
+        
         self.N = N
-        self.width =  width
         if basepoint:
             self.basepoint = basepoint
         else:
@@ -74,11 +100,16 @@ class Grid(object):
         self.comps = self.pca.components_
         self.vars = self.pca.explained_variance_
 
+        self.np_samples = self.data.to_numpy()
+       
+        self.width_1=1.2*(np.dot(self.np_samples,self.comps[0]).max()-np.dot(self.np_samples,self.comps[0]).min())/(self.N*2-2)
+        self.width_2=1.2*(np.dot(self.np_samples,self.comps[1]).max()-np.dot(self.np_samples,self.comps[1]).min())/(self.N*2-2)
+
         self.make_init_grid()
         self.make_numpy_grid()
 
 
-    def draw(self, ax, should_show_center_point=True, should_show_pca=True):
+    def draw(self, ax, should_show_center_point=True, should_show_pca=True, show_grid=True):
         
         if should_show_center_point:
             ax.plot(self.basepoint[0],self.basepoint[1],self.basepoint[2], 'rx')
@@ -104,9 +135,51 @@ class Grid(object):
 
         #         if t:
         #             plt.pause(t)
-        ax.scatter(self.np_grid[:,:,0],self.np_grid[:,:,1],self.np_grid[:,:,2], s=0.8)
+        if show_grid:
+            ax.scatter(self.np_grid[:,:,0],self.np_grid[:,:,1],self.np_grid[:,:,2], s=0.8)
 
+    def show_one_grid_point(self, fig, i, j):
+        gridpoints = self.find_grid_around_gridpoint(i,j)
+        np_grids=np.empty((len(gridpoints),3))
+        gridpoints[0].draw_samples(fig)
+        for p in range(len(gridpoints)):
+            np_grids[p]=gridpoints[p].pos
+            
+        fig.plot(np_grids[0,0],np_grids[0,1],np_grids[0,2], 'go')
+        fig.plot(np_grids[1:,0],np_grids[1:,1],np_grids[1:,2], 'ro')
+        np_samples = np.array(self.index(i,j).around_samples)
+        if np_samples.size != 0:
+            fig.plot(np_samples[:,0],np_samples[:,1],np_samples[:,2], 'bx')
 
+    def find_grid_around_gridpoint(self, i, j, start='center'):
+        gridpoints=[]
+        if start=='center':
+            gridpoints.append(self.index(i,j))
+            try:
+                gridpoints.append(self.index(i+1,j+1))
+            except: pass
+            try:
+                gridpoints.append(self.index(i,j+1))
+            except: pass
+            try:
+                gridpoints.append(self.index(i-1,j+1))
+            except: pass
+            try:
+                gridpoints.append(self.index(i-1,j))
+            except: pass
+            try:
+                gridpoints.append(self.index(i-1,j-1))
+            except: pass
+            try:
+                gridpoints.append(self.index(i,j-1))
+            except: pass
+            try:
+                gridpoints.append(self.index(i+1,j-1))
+            except: pass
+            try:
+                gridpoints.append(self.index(i+1,j))
+            except: pass
+        return gridpoints
 
     def index(self, i, j, start='center'):  #grid point at index i,j <phi(i,j)> with i, j belong to Z (integer)
         """
@@ -148,10 +221,10 @@ class Grid(object):
         else:
             if j==0:
                 prev_i_point = self.index(i-1,0) if i>0 else self.index(i+1,0) #if i<0
-                c_pos = prev_i_point.pos + self.width*prev_i_point.e1 if i>0 else prev_i_point.pos - self.width*prev_i_point.e1
+                c_pos = prev_i_point.pos + self.width_1*prev_i_point.e1 if i>0 else prev_i_point.pos - self.width_1*prev_i_point.e1
             else:
                 prev_j_point = self.index(i,j-1) if j>0 else self.index(i,j+1) #if j<0
-                c_pos = prev_j_point.pos + self.width*prev_j_point.e2 if j>0 else prev_j_point.pos - self.width*prev_j_point.e2
+                c_pos = prev_j_point.pos + self.width_2*prev_j_point.e2 if j>0 else prev_j_point.pos - self.width_2*prev_j_point.e2
         return c_pos
 
     def get_center(self, data):
@@ -178,7 +251,7 @@ class DataVisual():
             # print(self.C_points.head(3))
             self.S = self.covariance_matrix(self.nor_C_points)
             # print(self.S)
-            self.grid = Grid(self.C_points,N=4)
+            self.grid = Grid(self.C_points,N=7)
 
             self.whereis = pd.DataFrame(index=self.C_points.index,columns=['Position', 'NearestGrid'])
             for i in range(len(self.C_points)):
@@ -189,29 +262,50 @@ class DataVisual():
             
             self.find_gridpoint_of_data()
 
+            self.set_gridpoint_around()
+
+    def set_gridpoint_around(self):
+        for i in range(self.grid.size):
+            for j in range(self.grid.size):
+                self.grid.index(i,j,start='bottom-left').set_around_samples(self.grid.index(i,j,start='bottom-left').samples)
+                if i>0 and j>0:
+                    self.grid.index(i,j,start='bottom-left').set_around_samples(self.grid.index(i-1,j-1,start='bottom-left').samples)
+                if i>0:
+                    self.grid.index(i,j,start='bottom-left').set_around_samples(self.grid.index(i-1,j,start='bottom-left').samples)
+                if j>0:
+                    self.grid.index(i,j,start='bottom-left').set_around_samples(self.grid.index(i,j-1,start='bottom-left').samples)
+
         
     def find_gridpoint_of_data(self):
         for index in range(len(self.whereis)):
             data_pos = self.whereis['Position'].iloc[index]
-            grid_distance = np.zeros((self.grid.size,self.grid.size))
+            # grid_distance = np.zeros((self.grid.size,self.grid.size))
             for i in range(self.grid.size):
                 for j in range(self.grid.size):
                     if self.grid.index(i,j,start='bottom-left').is_point_in_grid(data_pos):
-                        try:
-                            if not(self.grid.index(i+1,j,start='bottom-left').is_point_in_grid(data_pos) or self.grid.index(i,j+1,start='bottom-left').is_point_in_grid(data_pos) or self.grid.index(i+1,j+1,start='bottom-left').is_point_in_grid(data_pos)):
-                                print("{} {}".format(i,j))
-                                break
-                        except: ## TODO need exception fix here
+                        is_there = True
+                        if i+1<self.grid.size and j+1<self.grid.size:
+                            if self.grid.index(i+1,j+1,start='bottom-left').is_point_in_grid(data_pos):
+                                is_there=False
+                        if i+1<self.grid.size:
+                            if self.grid.index(i+1,j,start='bottom-left').is_point_in_grid(data_pos):
+                                is_there=False
+                        if j+1<self.grid.size:
+                            if self.grid.index(i,j+1,start='bottom-left').is_point_in_grid(data_pos):
+                                is_there=False
+                        if is_there:
+                            self.whereis['NearestGrid'].iloc[index]=(self.grid.index(i,j,start='bottom-left').i,self.grid.index(i,j,start='bottom-left').j)
+                            self.grid.index(i,j,start='bottom-left').append_to_samples(data_pos)
                             break
                 else:
                     continue
                 break
 
-            self.whereis['NearestGrid']=0
+        print(self.whereis.notna())
 
             
 
-    def scatter_plot3D(self, data, should_show_center_point=True):
+    def scatter_plot3D(self, data, draw_samples=True):
         # pca = PCA(n_components=3)
         # pca.fit(data)
         # result=pd.DataFrame(pca.transform(data), columns=data.columns)
@@ -223,7 +317,8 @@ class DataVisual():
         x = data['J1_base']
         y = data['J2_shoulder']
         z = data['J3_elbow']
-        self.ax.scatter(x,y,z)
+        if draw_samples:
+            self.ax.scatter(x,y,z)
         self.ax.set_xlabel('J1 Base')
         self.ax.set_ylabel('J2 Shoudler')
         self.ax.set_zlabel('J3 Elbow')
@@ -349,7 +444,9 @@ if __name__=="__main__":
     csvfile = pathlib.Path().absolute()/"datalog/datalog2022-06-19.csv"
     visual = DataVisual(csvfile=csvfile)
     # visual.lagrange_multipler()
-    visual.scatter_plot3D(visual.C_points)
+    visual.scatter_plot3D(visual.C_points,draw_samples=False)
+    # visual.grid.index(-1,1).draw_samples(visual.ax)
+    visual.grid.show_one_grid_point(visual.ax,2,0)
     plt.show()
     
         
