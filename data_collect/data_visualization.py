@@ -9,20 +9,56 @@ import pathlib
 from sklearn.decomposition import PCA
 # from matplotlib.mlab import PCA as mlabPCA
 from time import sleep, time
+from math import sqrt, exp
 
-N=10    #->grid size = 2N-1
+N=4    #->grid size = 2N-1
 
 class GridPoint(object):
+    Alpha = 100.0
     def __init__(self, i, j, C_pos, unit_vector) -> None:
         self._i = i
         self._j = j
         self._C_pos = C_pos #position of grid point in C-space np.array([theta1, theta2, theta3])
-        self._es = unit_vector
+        self._es = np.copy(unit_vector)
         self._samples = []
         self._around_samples = []
 
+    def update_pos(self, new_pos):
+        self._C_pos=new_pos
+
+    def update_unit_vector(self, grid):
+        if self.i<grid.N-1:
+            print("Before Check here e1 {}".format(self._es[0]))
+            print(np.linalg.norm(grid.index(self.i+1,self.j).pos-self.pos))
+            print("Next i pos and this pos is {} {}".format(grid.index(self.i+1,self.j).pos,self.pos))
+            self._es[0]=(grid.index(self.i+1,self.j).pos-self.pos)/np.linalg.norm(grid.index(self.i+1,self.j).pos-self.pos)
+            # if np.isnan(self.e1.any()):
+            print("Check here e1 {}".format(self._es[0]))
+        if self.j<grid.N-1:
+            self._es[1]=(grid.index(self.i,self.j+1).pos-self.pos)/np.linalg.norm(grid.index(self.i,self.j+1).pos-self.pos)
+
+        self._es[2] = np.cross(self.e1,self.e2)
+
+
     def project_high(self, pos):
-        return np.abs(np.dot(self.e3,(pos-self.pos)))
+        """
+        e3 vector direction height (positive/negative)
+        """
+        return np.dot(self.e3,(pos-self.pos))
+    
+    def point_weight(self, pos):
+        """
+        weight function of sample point p with this Gridpoint
+        """
+        p=pos-self.pos
+        weight = np.abs(np.dot(p,self.e1))
+
+        weight =exp(-weight/self.Alpha)
+        if np.isnan(weight):
+            print("pos is {}".format(self.pos))
+            print("e1 is {}".format(self.e1))
+            print("weight is {}".format(weight))
+        return weight
 
     def is_point_in_grid(self, pos):
         if np.dot(self.e1,(pos-self.pos))<0: 
@@ -34,7 +70,7 @@ class GridPoint(object):
     
     def draw_samples(self, fig):
         np_samples = np.array(self._samples)
-        print(np_samples)
+        # print(np_samples)
         if np_samples.size != 0:
             fig.plot(np_samples[:,0],np_samples[:,1],np_samples[:,2], 'yo')
 
@@ -85,7 +121,7 @@ class GridPoint(object):
 
 
 class Grid(object):
-    def __init__(self, data, basepoint=None, N=10) -> None:
+    def __init__(self, data, basepoint=None) -> None:
         self.data = data
         
         self.N = N
@@ -126,6 +162,7 @@ class Grid(object):
                     linewidth=2,
                     color=f"C{i + 2}",
                 )
+        """
         # for i in range(self.N):
         #     for j in range(self.N):
         #         self.fig.scatter(self.index(i,j).pos[0],self.index(i,j).pos[1],self.index(i,j).pos[2], s=0.8)
@@ -135,8 +172,10 @@ class Grid(object):
 
         #         if t:
         #             plt.pause(t)
+        """
         if show_grid:
-            ax.scatter(self.np_grid[:,:,0],self.np_grid[:,:,1],self.np_grid[:,:,2], s=0.8)
+            self.make_numpy_grid()
+            ax.scatter(self.np_grid[:,:,0],self.np_grid[:,:,1],self.np_grid[:,:,2], s=2.8)
 
     def show_one_grid_point(self, fig, i, j):
         gridpoints = self.find_grid_around_gridpoint(i,j)
@@ -180,6 +219,27 @@ class Grid(object):
                 gridpoints.append(self.index(i+1,j))
             except: pass
         return gridpoints
+
+    def update_gridpoints(self):
+        for i in range(self.size):
+            for j in range(self.size):
+                point = self.index(i,j,start='bottom-left')
+                around_samples = point.around_samples
+                # weights = np.zeros(len(around_samples))
+                heights = np.zeros(len(around_samples))
+                for sample in range(len(around_samples)):
+                    # weights[sample] = point.point_weight(around_samples[sample])
+                    weight = point.point_weight(around_samples[sample])
+                    # print("Weight is {}".format(weight))
+                    heights[sample] = weight*point.project_high(around_samples[sample])
+                delta_z = point.e3*np.mean(heights)
+                # print(heights)
+                point.update_pos(point.pos+delta_z)
+
+        for i in range(self.size):
+            for j in range(self.size):
+                point = self.index(i,j,start='bottom-left')
+                point.update_unit_vector(self)
 
     def index(self, i, j, start='center'):  #grid point at index i,j <phi(i,j)> with i, j belong to Z (integer)
         """
@@ -251,7 +311,7 @@ class DataVisual():
             # print(self.C_points.head(3))
             self.S = self.covariance_matrix(self.nor_C_points)
             # print(self.S)
-            self.grid = Grid(self.C_points,N=7)
+            self.grid = Grid(self.C_points)
 
             self.whereis = pd.DataFrame(index=self.C_points.index,columns=['Position', 'NearestGrid'])
             for i in range(len(self.C_points)):
@@ -301,7 +361,7 @@ class DataVisual():
                     continue
                 break
 
-        print(self.whereis.notna())
+        # print(self.whereis.notna())
 
             
 
@@ -329,11 +389,6 @@ class DataVisual():
 
         
         self.grid.draw(ax=self.ax)
-
-
-        # if should_show_center_point:
-        #     self.base_point = np.array([np.mean(x), np.mean(y), np.mean(z)])
-        #     # print(self.base_point)
             
 
         # make simple, bare axis lines through space:
@@ -343,9 +398,6 @@ class DataVisual():
         # self.ax.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'r')
         # zAxisLine = ((0, 0), (0,0), (min(z), max(z)))
         # self.ax.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'r')
-        
-        # self.comps = []
-        
         
         # self.make_grid(self.base_point, self.comps)
         # for grids in self.grids:
@@ -413,16 +465,11 @@ class DataVisual():
         dy = self.L.diff(y)
         dz = self.L.diff(z)
         dl = self.L.diff(l)*-1
-        print(dx)
-        print(dy)
-        print(dz)
-        print('here')
+       
         extreme_value_candidates = sy.solve([dx, dy, dz, dl])
-        print("hhhere")
         P = []
 
         for evc in extreme_value_candidates:
-            print(evc)
             p = {
                 x: self.value_without_infinitesimal(evc[x]),
                 y: self.value_without_infinitesimal(evc[y]),
@@ -444,9 +491,12 @@ if __name__=="__main__":
     csvfile = pathlib.Path().absolute()/"datalog/datalog2022-06-19.csv"
     visual = DataVisual(csvfile=csvfile)
     # visual.lagrange_multipler()
-    visual.scatter_plot3D(visual.C_points,draw_samples=False)
+    for n in range(3):
+        visual.grid.update_gridpoints()
+    visual.scatter_plot3D(visual.C_points,draw_samples=True)
     # visual.grid.index(-1,1).draw_samples(visual.ax)
-    visual.grid.show_one_grid_point(visual.ax,2,0)
+    
+    # visual.grid.show_one_grid_point(visual.ax,2,0)
     plt.show()
     
         
