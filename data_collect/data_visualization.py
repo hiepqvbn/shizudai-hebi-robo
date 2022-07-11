@@ -14,7 +14,7 @@ from math import sqrt, exp
 N=4    #->grid size = 2N-1
 
 class GridPoint(object):
-    Alpha = 100.0
+    Alpha = 10.0
     def __init__(self, i, j, C_pos, unit_vector) -> None:
         self._i = i
         self._j = j
@@ -22,18 +22,22 @@ class GridPoint(object):
         self._es = np.copy(unit_vector)
         self._samples = []
         self._around_samples = []
+        # print(self)
+
+    def __str__(self) -> str:
+        return "Gridpoint: Index[{},{}], Position [{}], Components [e1,e2,e3]:[{},{},{}]".format(self.i,self.j, self.pos, self.e1,self.e2,self.e3)
 
     def update_pos(self, new_pos):
         self._C_pos=new_pos
 
     def update_unit_vector(self, grid):
         if self.i<grid.N-1:
-            print("Before Check here e1 {}".format(self._es[0]))
-            print(np.linalg.norm(grid.index(self.i+1,self.j).pos-self.pos))
-            print("Next i pos and this pos is {} {}".format(grid.index(self.i+1,self.j).pos,self.pos))
+            # print("Before Check here e1 {}".format(self._es[0]))
+            # print(np.linalg.norm(grid.index(self.i+1,self.j).pos-self.pos))
+            # print("Next i pos and this pos is {} {}".format(grid.index(self.i+1,self.j).pos,self.pos))
             self._es[0]=(grid.index(self.i+1,self.j).pos-self.pos)/np.linalg.norm(grid.index(self.i+1,self.j).pos-self.pos)
             # if np.isnan(self.e1.any()):
-            print("Check here e1 {}".format(self._es[0]))
+            # print("Check here e1 {}".format(self._es[0]))
         if self.j<grid.N-1:
             self._es[1]=(grid.index(self.i,self.j+1).pos-self.pos)/np.linalg.norm(grid.index(self.i,self.j+1).pos-self.pos)
 
@@ -74,6 +78,21 @@ class GridPoint(object):
         if np_samples.size != 0:
             fig.plot(np_samples[:,0],np_samples[:,1],np_samples[:,2], 'yo')
 
+    def draw_comps(self, fig):
+        """
+        Draw e1, e2, e3 vector of Gridpoint
+        """
+        rate=0.15
+        for ii, comp in enumerate(self.components):         
+            fig.plot(
+                [self.pos[0], self.pos[0]+comp[0]*rate],
+                [self.pos[1], self.pos[1]+comp[1]*rate],
+                [self.pos[2], self.pos[2]+comp[2]*rate],
+                label=f"Component {ii}",
+                linewidth=1,
+                color=f"C{ii + 2}",
+            )
+
     @property
     def around_samples(self):
         return self._around_samples
@@ -106,6 +125,10 @@ class GridPoint(object):
     @property
     def pos(self):
         return self._C_pos
+
+    @property
+    def components(self):
+        return self._es
 
     @property
     def e1(self):
@@ -145,7 +168,7 @@ class Grid(object):
         self.make_numpy_grid()
 
 
-    def draw(self, ax, should_show_center_point=True, should_show_pca=True, show_grid=True):
+    def draw(self, ax, should_show_center_point=True, should_show_pca=True, show_grid=True, show_gridpoint_comps=True):
         
         if should_show_center_point:
             ax.plot(self.basepoint[0],self.basepoint[1],self.basepoint[2], 'rx')
@@ -176,6 +199,13 @@ class Grid(object):
         if show_grid:
             self.make_numpy_grid()
             ax.scatter(self.np_grid[:,:,0],self.np_grid[:,:,1],self.np_grid[:,:,2], s=2.8)
+
+        if show_gridpoint_comps:
+            for i in range(self.size):
+                for j in range(self.size):
+                    point = self.index(i,j,start='bottom-left')
+                    point.draw_comps(ax)
+
 
     def show_one_grid_point(self, fig, i, j):
         gridpoints = self.find_grid_around_gridpoint(i,j)
@@ -227,14 +257,16 @@ class Grid(object):
                 around_samples = point.around_samples
                 # weights = np.zeros(len(around_samples))
                 heights = np.zeros(len(around_samples))
-                for sample in range(len(around_samples)):
-                    # weights[sample] = point.point_weight(around_samples[sample])
-                    weight = point.point_weight(around_samples[sample])
-                    # print("Weight is {}".format(weight))
-                    heights[sample] = weight*point.project_high(around_samples[sample])
-                delta_z = point.e3*np.mean(heights)
-                # print(heights)
-                point.update_pos(point.pos+delta_z)
+                if around_samples:
+                    for sample in range(len(around_samples)):
+                        # weights[sample] = point.point_weight(around_samples[sample])
+                        weight = point.point_weight(around_samples[sample])
+                        # print("Weight is {}".format(weight))
+                        heights[sample] = weight*point.project_high(around_samples[sample])
+                    delta_z = point.e3*np.mean(heights)
+                    # print("around samples {}".format(around_samples))
+                    # print("delta z {}".format(delta_z))
+                    point.update_pos(point.pos+delta_z)
 
         for i in range(self.size):
             for j in range(self.size):
@@ -416,22 +448,6 @@ class DataVisual():
 
         # ax2.plot_wireframe(x, y, z, rstride=10, cstride=10)
 
-        
-
-    def make_grid(self, base_point, comps, width=0.1, N=5):
-        self.grids = np.zeros((4,N,N,3))
-        for k in range(4):
-            for i in range(len(self.grids[k])):
-                self.grids[k][i][0] = base_point + i*comps[0]*width if k%2==0 else base_point - i*comps[0]*width
-                for j in range(len(self.grids[k][i])):
-                    self.grids[k][i][j] = self.grids[k][i][0] + j*comps[1]*width if k<2 else self.grids[k][i][0] - j*comps[1]*width
-        # print("this:{}".format(self.grids))
-
-    def grids_pos(self, i, j): #grid postition phi(i,j) with i, j belong to Z (integer)
-        if j<0:
-            return self.grids[2][-i][-j] if i<0 else self.grids[3][i][-j] # third descartes quadrant or forth descartes quadrant
-        else:
-            return self.grids[1][-i][j] if i<0 else self.grids[1][i][j] # second descartes quadrant or first descartes quadrant
 
     def normalized_df(self, df):
         return (df - np.mean(df, axis=0)) / np.std(df, axis=0)
@@ -493,7 +509,9 @@ if __name__=="__main__":
     # visual.lagrange_multipler()
     for n in range(3):
         visual.grid.update_gridpoints()
-    visual.scatter_plot3D(visual.C_points,draw_samples=True)
+        visual.find_gridpoint_of_data()
+        visual.set_gridpoint_around()
+    visual.scatter_plot3D(visual.C_points,draw_samples=False)
     # visual.grid.index(-1,1).draw_samples(visual.ax)
     
     # visual.grid.show_one_grid_point(visual.ax,2,0)
