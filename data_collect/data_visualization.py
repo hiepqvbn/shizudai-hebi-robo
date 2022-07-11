@@ -1,9 +1,11 @@
 import math
 import numpy as np
-from pyparsing import col
-import sympy as sy
+# import sympy as sy
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib
+# matplotlib.use("Agg")
+# import matplotlib.backends.backend_agg as agg
 from mpl_toolkits.mplot3d import Axes3D
 import pathlib
 from sklearn.decomposition import PCA
@@ -41,7 +43,7 @@ class GridPoint(object):
         if self.j<grid.N-1:
             self._es[1]=(grid.index(self.i,self.j+1).pos-self.pos)/np.linalg.norm(grid.index(self.i,self.j+1).pos-self.pos)
 
-        self._es[2] = np.cross(self.e1,self.e2)
+        self._es[2] = -np.cross(self.e1,self.e2)
 
 
     def project_high(self, pos):
@@ -204,7 +206,7 @@ class Grid(object):
             for i in range(self.size):
                 for j in range(self.size):
                     point = self.index(i,j,start='bottom-left')
-                    point.draw_comps(ax)
+                    # point.draw_comps(ax)
 
 
     def show_one_grid_point(self, fig, i, j):
@@ -332,7 +334,12 @@ class Grid(object):
 
 
 class DataVisual():
-    def __init__(self, csvfile=None) -> None:
+    def __init__(self, csvfile=None, end_effector=None) -> None:
+        self.fig = plt.figure(figsize=(12, 9))
+        self.ax = Axes3D(self.fig)
+        # self.canvas = agg.FigureCanvasAgg(self.fig)
+        # self.canvas.draw()
+
         if csvfile:
             self.df = pd.read_csv(csvfile)
             self.df.set_index("timestamp", inplace=True)
@@ -355,6 +362,10 @@ class DataVisual():
             self.find_gridpoint_of_data()
 
             self.set_gridpoint_around()
+        
+        if end_effector is not None: #end_effector should be a numpy array
+            self.end_effector = end_effector
+            self.ax.plot(end_effector[0], end_effector[1], end_effector[2], 'ys')
 
     def set_gridpoint_around(self):
         for i in range(self.grid.size):
@@ -372,45 +383,47 @@ class DataVisual():
         for index in range(len(self.whereis)):
             data_pos = self.whereis['Position'].iloc[index]
             # grid_distance = np.zeros((self.grid.size,self.grid.size))
+            gridpoints = []
             for i in range(self.grid.size):
                 for j in range(self.grid.size):
                     if self.grid.index(i,j,start='bottom-left').is_point_in_grid(data_pos):
-                        is_there = True
-                        if i+1<self.grid.size and j+1<self.grid.size:
-                            if self.grid.index(i+1,j+1,start='bottom-left').is_point_in_grid(data_pos):
-                                is_there=False
-                        if i+1<self.grid.size:
-                            if self.grid.index(i+1,j,start='bottom-left').is_point_in_grid(data_pos):
-                                is_there=False
-                        if j+1<self.grid.size:
-                            if self.grid.index(i,j+1,start='bottom-left').is_point_in_grid(data_pos):
-                                is_there=False
-                        if is_there:
-                            self.whereis['NearestGrid'].iloc[index]=(self.grid.index(i,j,start='bottom-left').i,self.grid.index(i,j,start='bottom-left').j)
-                            self.grid.index(i,j,start='bottom-left').append_to_samples(data_pos)
-                            break
-                else:
-                    continue
-                break
+                        gridpoints.append(self.grid.index(i,j,start='bottom-left'))
+            
+            if gridpoints:
+                np_gridpoints = np.empty(len(gridpoints))
+                for k, point in enumerate(gridpoints):
+                    np_gridpoints[k] = np.linalg.norm(data_pos-point.pos)
+                nearest_point = gridpoints[np.argmin(np_gridpoints)]
+                
+                        # is_there = True
+                        # if i+1<self.grid.size and j+1<self.grid.size:
+                        #     if self.grid.index(i+1,j+1,start='bottom-left').is_point_in_grid(data_pos):
+                        #         is_there=False
+                        # if i+1<self.grid.size:
+                        #     if self.grid.index(i+1,j,start='bottom-left').is_point_in_grid(data_pos):
+                        #         is_there=False
+                        # if j+1<self.grid.size:
+                        #     if self.grid.index(i,j+1,start='bottom-left').is_point_in_grid(data_pos):
+                        #         is_there=False
+                        # if is_there:
+                self.whereis['NearestGrid'].iloc[index]=(nearest_point.i,nearest_point.j)
+                nearest_point.append_to_samples(data_pos)
+                #             break
+                # else:
+                #     continue
+                # break
 
         # print(self.whereis.notna())
 
             
 
-    def scatter_plot3D(self, data, draw_samples=True):
-        # pca = PCA(n_components=3)
-        # pca.fit(data)
-        # result=pd.DataFrame(pca.transform(data), columns=data.columns)
-        
-        
-
-        self.fig = plt.figure(figsize=(12, 9))
-        self.ax = Axes3D(self.fig)
+    def scatter_plot3D(self, data, draw_samples=True): 
         x = data['J1_base']
         y = data['J2_shoulder']
         z = data['J3_elbow']
         if draw_samples:
             self.ax.scatter(x,y,z)
+
         self.ax.set_xlabel('J1 Base')
         self.ax.set_ylabel('J2 Shoudler')
         self.ax.set_zlabel('J3 Elbow')
@@ -470,31 +483,6 @@ class DataVisual():
     def norm(self, vec):
         return math.sqrt(np.dot(vec, vec))
 
-    def lagrange_multipler(self):
-        x, y, z, l = sy.symbols('x y z lamda')
-        self.f = self.maximize_f(self.S, x, y, z)
-        # print(self.f)
-        self.g = self.constrain_f(x, y, z)
-        self.L =  self.f - l*self.g
-
-        dx = self.L.diff(x)
-        dy = self.L.diff(y)
-        dz = self.L.diff(z)
-        dl = self.L.diff(l)*-1
-       
-        extreme_value_candidates = sy.solve([dx, dy, dz, dl])
-        P = []
-
-        for evc in extreme_value_candidates:
-            p = {
-                x: self.value_without_infinitesimal(evc[x]),
-                y: self.value_without_infinitesimal(evc[y]),
-                z: self.value_without_infinitesimal(evc[z]),
-                l: self.value_without_infinitesimal(evc[l])
-            }
-            P.append(p)
-            
-
     def match2points(self, p1, p2):
         p1 = self.C_points.iloc[p1] 
         p2 = self.C_points.iloc[p2]
@@ -505,16 +493,28 @@ class DataVisual():
 
 if __name__=="__main__":
     csvfile = pathlib.Path().absolute()/"datalog/datalog2022-06-19.csv"
-    visual = DataVisual(csvfile=csvfile)
-    # visual.lagrange_multipler()
-    for n in range(3):
+    end_effector = np.array([1.2, 1.3, 0.2])
+    # plt.ion()
+    visual = DataVisual(csvfile=csvfile, end_effector=end_effector)
+    
+    for n in range(1000):
+        print("Loop {}".format(n))
+        # visual.fig.clear()
+        # visual.scatter_plot3D(visual.C_points,draw_samples=False)
+        # visual.fig.canvas.draw()
+        # visual.fig.canvas.flush_events()
         visual.grid.update_gridpoints()
-        visual.find_gridpoint_of_data()
-        visual.set_gridpoint_around()
-    visual.scatter_plot3D(visual.C_points,draw_samples=False)
+        #TODO  need to reset samples and around samples before do it
+        # visual.find_gridpoint_of_data()
+        # visual.set_gridpoint_around()
+        # # plt.pause(0.2)
+
+    visual.scatter_plot3D(visual.C_points,draw_samples=True)
+    
     # visual.grid.index(-1,1).draw_samples(visual.ax)
     
     # visual.grid.show_one_grid_point(visual.ax,2,0)
     plt.show()
+    # plt.pause(10)
     
         
