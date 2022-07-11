@@ -474,12 +474,6 @@ class DataVisual():
     def constrain_f(self, x,y,z):
         return x**2 + y**2 + z**2 - 1
 
-    def value_without_infinitesimal(sympy_value):
-        if type(sympy_value) == sy.numbers.Add:
-            return sympy_value.args[0]
-        else:
-            return sympy_value
-
     def norm(self, vec):
         return math.sqrt(np.dot(vec, vec))
 
