@@ -41,6 +41,10 @@ def main():
     from Arm import pygame_GUI
     from data_collect import data_collect
     from computer_vision import realsense_depth, detect_blue_mark
+    from data_collect import model
+    import pathlib
+    import numpy as np
+    import matplotlib.pyplot as plt
 
     class mainGUI(pygame_GUI.pygameGUI):
         def __init__(self, w=640, h=480) -> None:

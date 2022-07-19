@@ -23,8 +23,9 @@ class RobotArm(threading.Thread):
     "J3_elbow": {"max":None, "min":None},
   }
 
-  def __init__(self, queue=None, event=None):
+  def __init__(self, queue=None, event=None, model=None):
     # sleep(3)
+    self.model = model
     self.gui_queue = queue
     self.gui_event = event
     self._isConnected = False
@@ -254,6 +255,16 @@ class RobotArm(threading.Thread):
       if self.LIMIT_POSITION[mode.name]["max"]: #not None
         if self.joint_angles[mode.value]>self.LIMIT_POSITION[mode.name]["max"]:
           self.joint_angles[mode.value]=self.LIMIT_POSITION[mode.name]["max"]
+    if self.model:
+      new_pos = np.empty(3)
+      for i in range(3):
+        new_pos[i]=self.joint_angles[i]
+      self.model.cal_next_position(new_pos)
+      for i in range(3):
+        self.joint_angles[i] = self.model.end_effector[i]
+
+  def input_model(self, model):
+    self.model = model
 
   def set_arm_position(self, position):
     """
