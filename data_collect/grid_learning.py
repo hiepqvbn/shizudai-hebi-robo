@@ -9,8 +9,8 @@ N=4    #->grid size = 2N-1
 
 class GridPoint(object):
     ALPHA = 0.1
-    LAMBDA = 10**(-3)
-    K=10**1
+    LAMBDA = 10**(-6)
+    K=10**(-2)
     def __init__(self, i, j, C_pos, unit_vector) -> None:
         self._i = i
         self._j = j

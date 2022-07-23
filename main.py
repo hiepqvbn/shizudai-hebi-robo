@@ -41,7 +41,7 @@ def main():
     from Arm import pygame_GUI
     from data_collect import data_collect
     from computer_vision import realsense_depth, detect_blue_mark
-    from data_collect import model
+    from data_collect.model import Model
     import pathlib
     import numpy as np
     import matplotlib.pyplot as plt
@@ -62,9 +62,19 @@ def main():
     pyGUI = mainGUI()
     collect = data_collect.DataCollect(cols=pyGUI.robot.names)
     
-    camera_thread = threading.Thread(target=detect_blue_mark.main, args=())
-    camera_thread.start()
+    # camera_thread = threading.Thread(target=detect_blue_mark.main, args=())
+    # camera_thread.start()
     # rc = realsense_depth.DepthCamera()
+    csvfile = pathlib.Path().absolute()/collect.csv_filename
+    end_effector = np.zeros(3)
+    for i in range(3):
+        end_effector[i]=pyGUI.robot.joint_angles[i]
+    # # # plt.ion()
+    model = Model(end_effector=end_effector)
+    
+    model.train(csv_file=csvfile, iteration=10, show_plot=True)
+    # pyGUI.robot.input_model(model)
+    plt.show()
     while True:
         pyGUI.step()
     

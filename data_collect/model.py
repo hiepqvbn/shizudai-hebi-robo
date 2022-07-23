@@ -8,7 +8,7 @@ else:
 
 
 class Model():
-    SPEED = 0.1
+    SPEED = 0.01
     def __init__(self,end_effector) -> None:
         self.end_effector = end_effector
 
@@ -16,7 +16,7 @@ class Model():
         delta = pos-self.end_effector
         gradient = self.grid.grad_potential_energy(pos)
         print("Gradient is {}".format(gradient))
-        next_position = self.end_effector+delta+gradient*(delta/self.SPEED)**2/2
+        next_position = self.end_effector+delta-gradient*(delta/self.SPEED)**2/2
         print("Next position is {}".format(next_position))
         for i in range(3):
             self.end_effector[i] = next_position[i]

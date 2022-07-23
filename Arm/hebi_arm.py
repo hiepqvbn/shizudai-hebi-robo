@@ -4,7 +4,7 @@ import threading
 import hebi
 import numpy as np
 from time import sleep, time
-import keyboard
+# import keyboard
 import os
 # import grip
 
