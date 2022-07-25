@@ -7,23 +7,39 @@ class DataCollect(object):
 
     col=pd.Series(['timestamp'])
 
-    def __init__(self, cols=[]) -> None:
-        
-        #csv file name = datalog+today.csv
-        self.csv_filename = 'datalog/datalog{}.csv'.format(date.today())
-        self.col = pd.concat([self.col,pd.Series(cols)], ignore_index=True)
-        #load csv file as pandas dataframe
-        try:    
-            self.log_df = pd.read_csv(self.csv_filename)
-            # print(self.log_df)
-            # print((self.log_df.columns == ['theta','camera']).all())
-            if not (self.log_df.columns == self.col).all():   ##bug here
-                # print("ok")
+    def __init__(self, cols=[], is_sim=False) -> None:
+        if not is_sim:
+            #csv file name = datalog+today.csv
+            self.csv_filename = 'datalog/datalog{}.csv'.format(date.today())
+            self.col = pd.concat([self.col,pd.Series(cols)], ignore_index=True)
+            #load csv file as pandas dataframe
+            try:    
+                self.log_df = pd.read_csv(self.csv_filename)
+                # print(self.log_df)
+                # print((self.log_df.columns == ['theta','camera']).all())
+                if not (self.log_df.columns == self.col).all():   ##bug here
+                    # print("ok")
+                    self.log_df = self.make_new_dataframe()
+            except:     #if data file haven't made, make as an empty csv
                 self.log_df = self.make_new_dataframe()
-        except:     #if data file haven't made, make as an empty csv
-            self.log_df = self.make_new_dataframe()
-        finally:
-            self.log_df = self.log_df.set_index('timestamp')
+            finally:
+                self.log_df = self.log_df.set_index('timestamp')
+        else:
+            #csv file name = datalog+today.csv
+            self.csv_filename = 'datalog/datalog_sim{}.csv'.format(date.today())
+            self.col = pd.concat([self.col,pd.Series(cols)], ignore_index=True)
+            #load csv file as pandas dataframe
+            try:    
+                self.log_df = pd.read_csv(self.csv_filename)
+                # print(self.log_df)
+                # print((self.log_df.columns == ['theta','camera']).all())
+                if not (self.log_df.columns == self.col).all():   ##bug here
+                    # print("ok")
+                    self.log_df = self.make_new_dataframe()
+            except:     #if data file haven't made, make as an empty csv
+                self.log_df = self.make_new_dataframe()
+            finally:
+                self.log_df = self.log_df.set_index('timestamp')
 
     
     def make_new_dataframe(self):
