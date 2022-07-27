@@ -4,14 +4,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 if __name__=="__main__":
-    csvfile = pathlib.Path().absolute()/"datalog/datalog2022-06-19.csv"
+    csvfile = pathlib.Path().absolute()/"datalog/datalog_sim2022-07-27.csv"
     end_effector = np.array([1.2, 1.3, 0.2])
     # plt.ion()
     model = Model(end_effector=end_effector)
-    if model:
-        print(model)
-    # model.train(csv_file=csvfile, show_plot=True)
+    # if model:
+    #     print(model)
+
+    model.train(csv_file=csvfile, iteration=1, show_plot=True)
     print("olk")
+    plt.show()
     # new_pos = np.zeros(3)
     # while True:
     #     p1 = input("Input end-effector position[1]: ")

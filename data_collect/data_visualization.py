@@ -9,15 +9,18 @@ import matplotlib
 from mpl_toolkits.mplot3d import Axes3D
 import pathlib
 from sklearn.decomposition import PCA
+from sklearn.cluster import KMeans
 # from matplotlib.mlab import PCA as mlabPCA
 from time import sleep, time
-from math import sqrt, exp
+from math import sqrt, exp, pi
 
 if __name__=="__main__":
     from grid_learning import *
 else:
-    from data_collect.grid_learning import *
-
+    try:
+        from data_collect.grid_learning import *
+    except:
+        from grid_learning import *
 
 
 class DataVisual():
@@ -32,27 +35,35 @@ class DataVisual():
             self.df.set_index("timestamp", inplace=True)
             
             self.C_points = self.df[['J1_base','J2_shoulder','J3_elbow']]#.assign(Index=range(len(self.df))).set_index('Index')
-            # print(self.C_points.head(3))
-            self.nor_C_points = self.normalized_df(self.C_points)
-            # print(self.C_points.head(3))
-            self.S = self.covariance_matrix(self.nor_C_points)
-            # print(self.S)
-            self.grid = Grid(self.C_points)
-
-            self.whereis = pd.DataFrame(index=self.C_points.index,columns=['Position', 'NearestGrid'])
-            for i in range(len(self.C_points)):
-                pos = np.array([self.C_points['J1_base'].iloc[i],self.C_points['J2_shoulder'].iloc[i],self.C_points['J3_elbow'].iloc[i]])
-                self.whereis['Position'].iloc[i]=pos
-
-            # print(self.whereis.head(5))
             
-            self.find_gridpoint_of_data()
+            # K-means Clustering Algorithm
+            k=6 #clusters number
+            self.clustering(self.C_points, k)
 
-            self.set_gridpoint_around()
+            # Add k-means clustering label to Configuration Points Dataframe
+            self.C_points['Kmeans_label'] = self.kmeans.labels_
+            # print(self.C_points.head(3))
+            
+            self.grids = []
+            for i in range(k):
+                data = self.C_points[self.C_points['Kmeans_label']==i].iloc[:,0:3]
+                # print(data.head(3))
+                # print("C points len:{}".format(len(self.C_points))) 
+                # print("data len:{}".format(len(data)))            
+                grid = Grid(data)
+                # if i==0:
+                #     data.to_csv("thetas.csv")
+            
+                self.grids.append(grid)
         
         if end_effector is not None: #end_effector should be a numpy array
             self.end_effector = end_effector
             self.ee_plot, = self.ax.plot(self.end_effector[0], self.end_effector[1], self.end_effector[2], 'ys')
+
+    def clustering(self, data, k):
+        self.kmeans = KMeans(n_clusters=k)
+        self.kmeans.fit(data)
+        # print("i=0 kmeans data number {}".format(np.count_nonzero(self.kmeans.labels_==0)))
 
     def update_end_effector(self,marker=None):
         print("End effector array {}".format(self.end_effector))
@@ -62,102 +73,26 @@ class DataVisual():
         self.ee_plot.set_data_3d(self.end_effector)
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
-
-    def set_gridpoint_around(self):
-        for i in range(self.grid.size):
-            for j in range(self.grid.size):
-                self.grid.index(i,j,start='bottom-left').set_around_samples(self.grid.index(i,j,start='bottom-left').samples)
-                if i>0 and j>0:
-                    self.grid.index(i,j,start='bottom-left').set_around_samples(self.grid.index(i-1,j-1,start='bottom-left').samples)
-                if i>0:
-                    self.grid.index(i,j,start='bottom-left').set_around_samples(self.grid.index(i-1,j,start='bottom-left').samples)
-                if j>0:
-                    self.grid.index(i,j,start='bottom-left').set_around_samples(self.grid.index(i,j-1,start='bottom-left').samples)
-
-        
-    def find_gridpoint_of_data(self):
-        self.grid.reset_samples()
-        for index in range(len(self.whereis)):
-            data_pos = self.whereis['Position'].iloc[index]
-            # grid_distance = np.zeros((self.grid.size,self.grid.size))
-            gridpoints = []
-            for i in range(self.grid.size):
-                for j in range(self.grid.size):
-                    if self.grid.index(i,j,start='bottom-left').is_point_in_grid(data_pos):
-                        gridpoints.append(self.grid.index(i,j,start='bottom-left'))
-            
-            if gridpoints:
-                np_gridpoints = np.empty(len(gridpoints))
-                for k, point in enumerate(gridpoints):
-                    np_gridpoints[k] = np.linalg.norm(data_pos-point.pos)
-                nearest_point = gridpoints[np.argmin(np_gridpoints)]
-                
-                        # is_there = True
-                        # if i+1<self.grid.size and j+1<self.grid.size:
-                        #     if self.grid.index(i+1,j+1,start='bottom-left').is_point_in_grid(data_pos):
-                        #         is_there=False
-                        # if i+1<self.grid.size:
-                        #     if self.grid.index(i+1,j,start='bottom-left').is_point_in_grid(data_pos):
-                        #         is_there=False
-                        # if j+1<self.grid.size:
-                        #     if self.grid.index(i,j+1,start='bottom-left').is_point_in_grid(data_pos):
-                        #         is_there=False
-                        # if is_there:
-                self.whereis['NearestGrid'].iloc[index]=(nearest_point.i,nearest_point.j)
-                nearest_point.append_to_samples(data_pos)
-                #             break
-                # else:
-                #     continue
-                # break
-
-        # print(self.whereis.notna())
-
             
 
-    def scatter_plot3D(self, data, draw_samples=True): 
+    def scatter_plot3D(self, data, draw_samples=True, k=6): 
         x = data['J1_base']
         y = data['J2_shoulder']
         z = data['J3_elbow']
         if draw_samples:
-            self.ax.scatter(x,y,z)
+            self.ax.scatter(x,y,z, c=self.kmeans.labels_, cmap='rainbow')
 
         self.ax.set_xlabel('J1 Base')
         self.ax.set_ylabel('J2 Shoudler')
         self.ax.set_zlabel('J3 Elbow')
 
-        self.ax.set_xlim([0,3])
-        self.ax.set_ylim([0,3])
-        self.ax.set_zlim([-2,1])
+        self.ax.set_xlim([0,pi])
+        self.ax.set_ylim([pi/4,3*pi/4])
+        self.ax.set_zlim([-pi/2,pi/2])
 
-        
-        self.grid.draw(ax=self.ax)
+        for j in range(k):
+            self.grids[j].draw(ax=self.ax)
             
-
-        # make simple, bare axis lines through space:
-        # xAxisLine = ((min(x), max(x)), (0, 0), (0,0))
-        # self.ax.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'r')
-        # yAxisLine = ((0, 0), (min(y), max(y)), (0,0))
-        # self.ax.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'r')
-        # zAxisLine = ((0, 0), (0,0), (min(z), max(z)))
-        # self.ax.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'r')
-        
-        # self.make_grid(self.base_point, self.comps)
-        # for grids in self.grids:
-        #     self.ax.scatter(grids[:,:,0],grids[:,:,1],grids[:,:,2], s=0.8)
-
-        # for i in range(len(self.C_points)-1):
-        #     self.match2points(i, i+1)
-            # self.match2points(4, 2)
-        # linx, liny, linz = [x[1], x[3]], [y[1], y[3]], [z[1], z[3]]
-        
-        # self.ax.plot(linx, liny, linz, 'r--')
-        # ax2 = fig.add_subplot(122,projection='3d')
-
-        # # Plot a basic wireframe.
-        # ax2.plot_trisurf(x, y, z, linewidth=0, antialiased=False)
-
-        # ax2.plot_wireframe(x, y, z, rstride=10, cstride=10)
-
 
     def normalized_df(self, df):
         return (df - np.mean(df, axis=0)) / np.std(df, axis=0)

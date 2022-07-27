@@ -15,7 +15,7 @@ sys.path.append(str(package_root_directory))
 from data_collect.data_collect import DataCollect
 
 
-EPS = 5*10**(-3)
+EPS = 1*10**(-4)
 
 count=0
 
@@ -143,10 +143,21 @@ class Arm(object):
             self._theta[2] = float(the3)
 
     def random_angles(self):
-        ran_angles = np.random.random(3)*2*pi
-        self._theta[0] = ran_angles[0]
-        self._theta[1] = ran_angles[1]
-        self._theta[2] = ran_angles[2]
+        ran_angles = np.random.random(3)#*2*pi  ###[0,2pi]
+        self._theta[0] = ran_angles[0]*pi           ###[0,pi]
+        self._theta[1] = ran_angles[1]*pi/2 + pi/4  ###[pi/4,3pi/4]
+        self._theta[2] = ran_angles[2]*pi - pi/2    ###[-pi/2,pi/2]
+    
+    def input_pos_from_csv(self, csv_file):
+        import pandas as pd
+        
+        self.df = pd.read_csv(csv_file)
+
+    def update_pos_from_csv(self, i):
+        self._theta[0] = self.df.iloc[i,1]
+        self._theta[1] = self.df.iloc[i,2]
+        self._theta[2] = self.df.iloc[i,3]
+        time.sleep(0.1)
 
     @property
     def base(self):
@@ -238,12 +249,12 @@ class Cam(object):
         p1 = self.arm_on_screen[0]
         p2 = self.arm_on_screen[1]
         linx, liny = [p1[0], p2[0]], [p1[1], p2[1]]
-        self.line2, = self.ax.plot(linx, liny, 'r-')
+        self.line1, = self.ax.plot(linx, liny, 'r-')
 
         p1 = self.arm_on_screen[1]
         p2 = self.arm_on_screen[2]
         linx, liny = [p1[0], p2[0]], [p1[1], p2[1]]
-        self.line1, = self.ax.plot(linx, liny, 'g-')
+        self.line2, = self.ax.plot(linx, liny, 'g-')
 
     def draw_boundary(self):
         ALPHA = 6
@@ -287,7 +298,7 @@ class Cam(object):
         BETA = 0.8
         x,y=self.arm_on_screen[2]
         dis=np.abs(ALPHA*x-y+BETA)/sqrt(ALPHA**2+1)
-        if dis<EPS:
+        if dis<EPS and (x<self.w/2 and x>-self.w/2) and (y<self.h/2 and y>-self.h/2):
             print("Arm's EE on the boudary {}".format(self.arm.theta))
             return True
         else:
@@ -315,33 +326,46 @@ class Cam(object):
 
 
 if __name__=="__main__":
-    collect_data = DataCollect(cols=['theta_0', 'theta_1', 'theta_2'],is_sim=True)
-    # plt.ion()
+    collect_data = DataCollect(cols=['J1_base', 'J2_shoulder', 'J3_elbow'],is_sim=True)
+
     arm = Arm(base=np.array([3,0,-0.5]), l1=0.7, l2=0.4)
     cam = Cam(arm)
     cam.set_cam_angle(0,pi/2,pi/2)
     
+    # plt.ion()
     # cam.draw_cam()
     # cam.draw_boundary()
 
     # arm.draw_arm()
     # cam.draw_arm()
     # cam.update_draw()
+
+    # arm.input_pos_from_csv("thetas.csv")
+
+    count_loop = 0
     while True:
         # arm.input_pos(unit='rad')
+        # arm.update_pos_from_csv(count_loop)
         arm.random_angles()
+        ########
         arm.update()
+        #####
         # arm.update_draw()
+        ########
         cam.update_arm()
+        #####
         # cam.update_draw()
         # time.sleep(5)
+
+        count_loop +=1
         if cam.is_ee_on_boundary():
-            collect_data.write_data_to_csv(arm.theta)
+            collect_data.write_data_to_dataframe(arm.theta)
+            time.sleep(0.0001)
             count +=1
 
-        if count == 200:
-            print("collected {} data--Done".format(count))
+        if count == 2000:
+            collect_data.save_dataframe()
+            print("collected {} data in loop {}--Done".format(count, count_loop))
             break
         
     # plt.show()
-    # print(DH_transform(1,pi/2,0,-pi))

@@ -22,24 +22,25 @@ class Model():
             self.end_effector[i] = next_position[i]
         return next_position
 
-    def train(self, csv_file, iteration=3, show_plot=False):
+    def train(self, csv_file, iteration=3, show_plot=False, show_samples=True, k=6):
 
         if csv_file:
             self.visual = DataVisual(csvfile=csv_file, end_effector=self.end_effector)
 
         for i in range(iteration):
-            #training 
-            self.visual.grid.update_gridpoints()
-            self.visual.find_gridpoint_of_data()
-            self.visual.set_gridpoint_around()
+            #training
+            for j in range(k): 
+                self.visual.grids[j].update_gridpoints()
+                self.visual.grids[j].find_gridpoint_of_data()
+                self.visual.grids[j].set_gridpoint_around()
         
         if show_plot:
             # print("run here")
             # plt.ion()
-            self.visual.scatter_plot3D(self.visual.C_points,draw_samples=True)
+            self.visual.scatter_plot3D(self.visual.C_points,draw_samples=show_samples)
             # plt.show()
 
-        self.grid = self.visual.grid
+        self.grids = self.visual.grids
 
     def save(self):
         pass
@@ -48,7 +49,7 @@ class Model():
         pass
 
 if __name__=="__main__":
-    csvfile = pathlib.Path().absolute()/"datalog/datalog2022-06-19.csv"
+    csvfile = pathlib.Path().absolute()/"datalog_sim2022-07-26.csv"
     end_effector = np.array([1.2, 1.3, 0.2])
     model = Model(end_effector=end_effector)
     model.train(csv_file=csvfile, show_plot=True)

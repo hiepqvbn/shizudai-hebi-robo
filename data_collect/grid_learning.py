@@ -156,8 +156,9 @@ class GridPoint(object):
 
 class Grid(object):
     def __init__(self, data, basepoint=None) -> None:
+        # self.data = data[data['Kmeans_label']==0]
         self.data = data
-        
+
         self.N = N
         if basepoint:
             self.basepoint = basepoint
@@ -179,6 +180,51 @@ class Grid(object):
         self.make_numpy_grid()
 
         self.make_point_list()
+
+        self.whereis = pd.DataFrame(index=self.data.index,columns=['Position', 'NearestGrid'])
+
+        for i in range(len(self.data)):
+            pos = np.array([self.data['J1_base'].iloc[i],self.data['J2_shoulder'].iloc[i],self.data['J3_elbow'].iloc[i]])
+            self.whereis['Position'].iloc[i]=pos
+
+        # print(self.whereis.head(5))
+        
+        self.find_gridpoint_of_data()
+
+        self.set_gridpoint_around()
+        
+    def set_gridpoint_around(self):
+        for i in range(self.size):
+            for j in range(self.size):
+                self.index(i,j,start='bottom-left').set_around_samples(self.index(i,j,start='bottom-left').samples)
+                if i>0 and j>0:
+                    self.index(i,j,start='bottom-left').set_around_samples(self.index(i-1,j-1,start='bottom-left').samples)
+                if i>0:
+                    self.index(i,j,start='bottom-left').set_around_samples(self.index(i-1,j,start='bottom-left').samples)
+                if j>0:
+                    self.index(i,j,start='bottom-left').set_around_samples(self.index(i,j-1,start='bottom-left').samples)
+
+        
+    def find_gridpoint_of_data(self):
+        self.reset_samples()
+        for index in range(len(self.whereis)):
+            data_pos = self.whereis['Position'].iloc[index]
+            # grid_distance = np.zeros((self.grid.size,self.grid.size))
+            gridpoints = []
+            for i in range(self.size):
+                for j in range(self.size):
+                    if self.index(i,j,start='bottom-left').is_point_in_grid(data_pos):
+                        gridpoints.append(self.index(i,j,start='bottom-left'))
+            
+            if gridpoints:
+                np_gridpoints = np.empty(len(gridpoints))
+                for k, point in enumerate(gridpoints):
+                    np_gridpoints[k] = np.linalg.norm(data_pos-point.pos)
+                nearest_point = gridpoints[np.argmin(np_gridpoints)]
+                
+                self.whereis['NearestGrid'].iloc[index]=(nearest_point.i,nearest_point.j)
+                nearest_point.append_to_samples(data_pos)
+                
 
     #Calculate potential energy of end effector(from end effector position)
     def potential_energy(self, pos):

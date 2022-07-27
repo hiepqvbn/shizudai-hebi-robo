@@ -56,7 +56,7 @@ class DataCollect(object):
         return dt_fr
 
     def get_now(self):
-        return str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        return str(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
 
     def write_data_to_dataframe(self, dt):
         # print(self.log_df)
