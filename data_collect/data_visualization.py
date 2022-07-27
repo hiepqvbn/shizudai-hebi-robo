@@ -37,7 +37,7 @@ class DataVisual():
             self.C_points = self.df[['J1_base','J2_shoulder','J3_elbow']]#.assign(Index=range(len(self.df))).set_index('Index')
             
             # K-means Clustering Algorithm
-            k=6 #clusters number
+            k=1 #clusters number
             self.clustering(self.C_points, k)
 
             # Add k-means clustering label to Configuration Points Dataframe
@@ -75,12 +75,12 @@ class DataVisual():
         self.fig.canvas.flush_events()
             
 
-    def scatter_plot3D(self, data, draw_samples=True, k=6): 
+    def scatter_plot3D(self, data, draw_samples=True, k=1): 
         x = data['J1_base']
         y = data['J2_shoulder']
         z = data['J3_elbow']
         if draw_samples:
-            self.ax.scatter(x,y,z, c=self.kmeans.labels_, cmap='rainbow')
+            self.ax.scatter(x,y,z, s=0.2, c=self.kmeans.labels_, cmap='rainbow')
 
         self.ax.set_xlabel('J1 Base')
         self.ax.set_ylabel('J2 Shoudler')

@@ -90,6 +90,7 @@ class Arm(object):
         p2 = self.end_effector
         linx, liny, linz = [p1[0], p2[0]], [p1[1], p2[1]], [p1[2], p2[2]]
         self.line2.set_data_3d(linx,liny,linz)
+
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
 
@@ -152,12 +153,14 @@ class Arm(object):
         import pandas as pd
         
         self.df = pd.read_csv(csv_file)
+        print(self.df.head(3))
 
     def update_pos_from_csv(self, i):
         self._theta[0] = self.df.iloc[i,1]
         self._theta[1] = self.df.iloc[i,2]
         self._theta[2] = self.df.iloc[i,3]
-        time.sleep(0.1)
+        print("thete: {}".format(self.theta))
+        # time.sleep(0.1)
 
     @property
     def base(self):
@@ -326,46 +329,48 @@ class Cam(object):
 
 
 if __name__=="__main__":
+    plt.ion()
+
     collect_data = DataCollect(cols=['J1_base', 'J2_shoulder', 'J3_elbow'],is_sim=True)
 
     arm = Arm(base=np.array([3,0,-0.5]), l1=0.7, l2=0.4)
     cam = Cam(arm)
     cam.set_cam_angle(0,pi/2,pi/2)
     
-    # plt.ion()
-    # cam.draw_cam()
-    # cam.draw_boundary()
+    
+    cam.draw_cam()
+    cam.draw_boundary()
 
-    # arm.draw_arm()
-    # cam.draw_arm()
-    # cam.update_draw()
+    arm.draw_arm()
+    cam.draw_arm()
+    cam.update_draw()
 
-    # arm.input_pos_from_csv("thetas.csv")
+    arm.input_pos_from_csv("thetas27.csv")
 
     count_loop = 0
     while True:
         # arm.input_pos(unit='rad')
-        # arm.update_pos_from_csv(count_loop)
-        arm.random_angles()
+        arm.update_pos_from_csv(count_loop)
+        # arm.random_angles()
         ########
         arm.update()
         #####
-        # arm.update_draw()
+        arm.update_draw()
         ########
         cam.update_arm()
         #####
-        # cam.update_draw()
+        cam.update_draw()
         # time.sleep(5)
 
         count_loop +=1
-        if cam.is_ee_on_boundary():
-            collect_data.write_data_to_dataframe(arm.theta)
-            time.sleep(0.0001)
-            count +=1
+        # if cam.is_ee_on_boundary():
+        #     collect_data.write_data_to_dataframe(arm.theta)
+        #     time.sleep(0.0001)
+        #     count +=1
 
-        if count == 2000:
-            collect_data.save_dataframe()
-            print("collected {} data in loop {}--Done".format(count, count_loop))
-            break
+        # if count == 2000:
+        #     collect_data.save_dataframe()
+        #     print("collected {} data in loop {}--Done".format(count, count_loop))
+        #     break
         
-    # plt.show()
+        # plt.show()

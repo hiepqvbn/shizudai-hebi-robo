@@ -1,6 +1,8 @@
+from datetime import date
 import numpy as np
 import matplotlib.pyplot as plt
 import pathlib
+import time
 if __name__=="__main__":
     from data_visualization import *
 else:
@@ -22,28 +24,34 @@ class Model():
             self.end_effector[i] = next_position[i]
         return next_position
 
-    def train(self, csv_file, iteration=3, show_plot=False, show_samples=True, k=6):
+    def train(self, csv_file, iteration=3, show_plot=False, show_samples=True, k=1):
 
         if csv_file:
             self.visual = DataVisual(csvfile=csv_file, end_effector=self.end_effector)
 
+        self.grids = self.visual.grids
+
         for i in range(iteration):
             #training
             for j in range(k): 
-                self.visual.grids[j].update_gridpoints()
-                self.visual.grids[j].find_gridpoint_of_data()
-                self.visual.grids[j].set_gridpoint_around()
+                self.grids[j].update_gridpoints()
+                
         
         if show_plot:
             # print("run here")
             # plt.ion()
             self.visual.scatter_plot3D(self.visual.C_points,draw_samples=show_samples)
             # plt.show()
+            # time.sleep(1)
 
-        self.grids = self.visual.grids
+        
 
     def save(self):
-        pass
+        import pickle
+        from datetime import date
+        filename = "model{}".format(date.today())
+        with open(filename, 'wb') as outp:
+            pickle.dump(self, outp, pickle.HIGHEST_PROTOCOL)
 
     def load(self, model_file):
         pass

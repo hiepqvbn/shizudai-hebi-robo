@@ -5,10 +5,11 @@ import pandas as pd
 from sklearn.decomposition import PCA
 
 
-N=4    #->grid size = 2N-1
+N=3    #->grid size = 2N-1
 
 class GridPoint(object):
-    ALPHA = 0.1
+    ALPHA1 = 0.1
+    ALPHA2 = 0.1
     LAMBDA = 10**(-6)
     K=10**(-2)
     def __init__(self, i, j, C_pos, unit_vector) -> None:
@@ -38,16 +39,17 @@ class GridPoint(object):
         self._C_pos=new_pos
 
     def update_unit_vector(self, grid):
+        # Update e1
         if self.i<grid.N-1:
-            # print("Before Check here e1 {}".format(self._es[0]))
-            # print(np.linalg.norm(grid.index(self.i+1,self.j).pos-self.pos))
-            # print("Next i pos and this pos is {} {}".format(grid.index(self.i+1,self.j).pos,self.pos))
             self._es[0]=(grid.index(self.i+1,self.j).pos-self.pos)/np.linalg.norm(grid.index(self.i+1,self.j).pos-self.pos)
-            # if np.isnan(self.e1.any()):
-            # print("Check here e1 {}".format(self._es[0]))
+        else:   #gridpoint on the edge (i=N-1)
+            self._es[0]=grid.index(self.i-1,self.j).e1
+        # Update e2
         if self.j<grid.N-1:
             self._es[1]=(grid.index(self.i,self.j+1).pos-self.pos)/np.linalg.norm(grid.index(self.i,self.j+1).pos-self.pos)
-
+        else:
+            self._es[1]=grid.index(self.i,self.j-1).e2
+        # Update e3
         self._es[2] = -np.cross(self.e1,self.e2)
 
 
@@ -57,14 +59,28 @@ class GridPoint(object):
         """
         return np.dot(self.e3,(pos-self.pos))
     
-    def point_weight(self, pos):
+    def point_weight_e1(self, pos):
         """
         weight function of sample point p with this Gridpoint
         """
         p=pos-self.pos
         weight = np.abs(np.dot(p,self.e1))
 
-        weight = math.exp(-weight**2/self.ALPHA**2)
+        weight = math.exp(-weight**2/self.ALPHA1**2)
+        if np.isnan(weight):
+            print("pos is {}".format(self.pos))
+            print("e1 is {}".format(self.e1))
+            print("weight is {}".format(weight))
+        return weight
+
+    def point_weight_e2(self, pos):
+        """
+        weight function of sample point p with this Gridpoint
+        """
+        p=pos-self.pos
+        weight = np.abs(np.dot(p,self.e2))
+
+        weight = math.exp(-weight**2/self.ALPHA2**2)
         if np.isnan(weight):
             print("pos is {}".format(self.pos))
             print("e1 is {}".format(self.e1))
@@ -94,7 +110,8 @@ class GridPoint(object):
         Draw e1, e2, e3 vector of Gridpoint
         """
         rate=0.12
-        for ii, comp in enumerate(self.components):         
+        for ii, comp in enumerate(self.components):
+            # if not ii==2:    #dont show e3     
             fig.plot(
                 [self.pos[0], self.pos[0]+comp[0]*rate],
                 [self.pos[1], self.pos[1]+comp[1]*rate],
@@ -173,8 +190,8 @@ class Grid(object):
 
         self.np_samples = self.data.to_numpy()
        
-        self.width_1=1.2*(np.dot(self.np_samples,self.comps[0]).max()-np.dot(self.np_samples,self.comps[0]).min())/(self.N*2-2)
-        self.width_2=1.2*(np.dot(self.np_samples,self.comps[1]).max()-np.dot(self.np_samples,self.comps[1]).min())/(self.N*2-2)
+        self.width_1=0.8*(np.dot(self.np_samples,self.comps[0]).max()-np.dot(self.np_samples,self.comps[0]).min())/(self.N*2-2)
+        self.width_2=0.8*(np.dot(self.np_samples,self.comps[1]).max()-np.dot(self.np_samples,self.comps[1]).min())/(self.N*2-2)
 
         self.make_init_grid()
         self.make_numpy_grid()
@@ -281,7 +298,7 @@ class Grid(object):
         """
         if show_grid:
             self.make_numpy_grid()
-            ax.scatter(self.np_grid[:,:,0],self.np_grid[:,:,1],self.np_grid[:,:,2], s=2.8)
+            ax.scatter(self.np_grid[:,:,0],self.np_grid[:,:,1],self.np_grid[:,:,2], s=9)
 
         if show_gridpoint_comps:
             for i in range(self.size):
@@ -334,27 +351,63 @@ class Grid(object):
         return gridpoints
 
     def update_gridpoints(self):
-        for i in range(self.size):
-            for j in range(self.size):
-                point = self.index(i,j,start='bottom-left')
-                around_samples = point.around_samples
-                # weights = np.zeros(len(around_samples))
-                heights = np.zeros(len(around_samples))
-                if around_samples:
-                    for sample in range(len(around_samples)):
-                        # weights[sample] = point.point_weight(around_samples[sample])
-                        weight = point.point_weight(around_samples[sample])
-                        # print("Weight is {}".format(weight))
-                        heights[sample] = weight*point.project_high(around_samples[sample])
-                    delta_z = point.e3*np.mean(heights)
-                    # print("around samples {}".format(around_samples))
-                    # print("delta z {}".format(delta_z))
-                    point.update_pos(point.pos+delta_z)
+        self.update_gridpoints_e1()
+        self.update_gridpoints_e2()
+        self.update_gridpoints_dis()    #update distance between grid point same as weight1, weight2
+        self.find_gridpoint_of_data()
+        self.set_gridpoint_around()
 
-        for i in range(self.size):
-            for j in range(self.size):
-                point = self.index(i,j,start='bottom-left')
-                point.update_unit_vector(self)
+    def update_gridpoints_dis(self):
+        for point in self.point_list:
+            if point.i<0:
+                next_point_i = self.index(point.i+1,point.j)
+                new_pos = next_point_i.pos - self.width_1*point.e1
+            elif point.i>0:
+                prev_point_i = self.index(point.i-1,point.j)
+                new_pos = prev_point_i.pos + self.width_1*prev_point_i.e1
+            elif point.i==0:
+                new_pos=point.pos
+            point.update_pos(new_pos)
+        for point in self.point_list:
+            point.update_unit_vector(self)
+        for point in self.point_list:
+            if point.j<0:
+                next_point_j = self.index(point.i,point.j+1)
+                new_pos = next_point_j.pos - self.width_2*point.e2
+            elif point.j>0:
+                prev_point_j = self.index(point.i,point.j-1)
+                new_pos = prev_point_j.pos + self.width_2*prev_point_j.e2
+            elif point.j==0:
+                new_pos=point.pos
+            point.update_pos(new_pos)
+        for point in self.point_list:
+            point.update_unit_vector(self)
+
+    def update_gridpoints_e1(self):  
+        for point in self.point_list:
+            around_samples = point.around_samples
+            heights = np.zeros(len(around_samples))
+            if around_samples:
+                for sample in range(len(around_samples)):
+                    weight = point.point_weight_e1(around_samples[sample])
+                    heights[sample] = weight*point.project_high(around_samples[sample])
+                delta_z = point.e3*np.mean(heights)
+                point.update_pos(point.pos+delta_z)
+        for point in self.point_list:
+            point.update_unit_vector(self)
+
+    def update_gridpoints_e2(self):
+        for point in self.point_list:
+            around_samples = point.around_samples
+            heights = np.zeros(len(around_samples))
+            if around_samples:
+                for sample in range(len(around_samples)):
+                    weight = point.point_weight_e2(around_samples[sample])
+                    heights[sample] = weight*point.project_high(around_samples[sample])
+                delta_z = point.e3*np.mean(heights)
+                point.update_pos(point.pos+delta_z)
+        for point in self.point_list:
+            point.update_unit_vector(self)
 
     def index(self, i, j, start='center'):  #grid point at index i,j <phi(i,j)> with i, j belong to Z (integer)
         """

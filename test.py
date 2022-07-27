@@ -11,7 +11,8 @@ if __name__=="__main__":
     # if model:
     #     print(model)
 
-    model.train(csv_file=csvfile, iteration=1, show_plot=True)
+    model.train(csv_file=csvfile, iteration=30, show_plot=True, show_samples=True)
+    model.save()
     print("olk")
     plt.show()
     # new_pos = np.zeros(3)
