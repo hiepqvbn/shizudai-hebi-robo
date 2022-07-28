@@ -87,7 +87,7 @@ class DataVisual():
         self.ax.set_zlabel('J3 Elbow')
 
         self.ax.set_xlim([0,pi])
-        self.ax.set_ylim([pi/4,3*pi/4])
+        self.ax.set_ylim([0,pi])
         self.ax.set_zlim([-pi/2,pi/2])
 
         for j in range(k):

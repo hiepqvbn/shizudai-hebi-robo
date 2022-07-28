@@ -5,7 +5,7 @@ import pandas as pd
 from sklearn.decomposition import PCA
 
 
-N=3    #->grid size = 2N-1
+N=9    #->grid size = 2N-1
 
 class GridPoint(object):
     ALPHA1 = 0.1
@@ -51,6 +51,7 @@ class GridPoint(object):
             self._es[1]=grid.index(self.i,self.j-1).e2
         # Update e3
         self._es[2] = -np.cross(self.e1,self.e2)
+        self._es[2] = self.e3/np.linalg.norm(self.e3)   #-->norm(e3)=1
 
 
     def project_high(self, pos):
@@ -108,6 +109,9 @@ class GridPoint(object):
     def draw_comps(self, fig):
         """
         Draw e1, e2, e3 vector of Gridpoint
+        :e1:green
+        :e2:red
+        :e3:violet
         """
         rate=0.12
         for ii, comp in enumerate(self.components):
@@ -268,7 +272,7 @@ class Grid(object):
         
         return gradient
 
-    def draw(self, ax, should_show_center_point=True, should_show_pca=True, show_grid=True, show_gridpoint_comps=True):
+    def draw(self, ax, should_show_center_point=False, match_grid=True, should_show_pca=False, show_grid=True, show_gridpoint_comps=False):
         
         if should_show_center_point:
             ax.plot(self.basepoint[0],self.basepoint[1],self.basepoint[2], 'rx')
@@ -305,7 +309,27 @@ class Grid(object):
                 for j in range(self.size):
                     point = self.index(i,j,start='bottom-left')
                     point.draw_comps(ax)
+        
+        if match_grid:
+            for point in self.point_list:
+                if point.i<0:
+                    next_point_i = self.index(point.i+1,point.j)
+                    self.match2points(point.pos,next_point_i.pos,ax,'y-')
+                elif point.i>0:
+                    prev_point_i = self.index(point.i-1,point.j)
+                    self.match2points(point.pos,prev_point_i.pos,ax,'y-')
 
+            for point in self.point_list:
+                if point.j<0:
+                    next_point_j = self.index(point.i,point.j+1)
+                    self.match2points(point.pos,next_point_j.pos,ax,'y-')
+                elif point.j>0:
+                    prev_point_j = self.index(point.i,point.j-1)
+                    self.match2points(point.pos,prev_point_j.pos,ax,'y-')
+                
+    def match2points(self, p1, p2, ax, style):
+        linx, liny, linz = [p1[0], p2[0]], [p1[1], p2[1]], [p1[2], p2[2]]
+        ax.plot(linx, liny, linz, style)
 
     def show_one_grid_point(self, fig, i, j):
         gridpoints = self.find_grid_around_gridpoint(i,j)
@@ -358,28 +382,53 @@ class Grid(object):
         self.set_gridpoint_around()
 
     def update_gridpoints_dis(self):
-        for point in self.point_list:
-            if point.i<0:
+        for k in range(1,self.N):
+            for l in range(self.size): 
+                point = self.index(-k,l+1-self.N)   #point.i<0
                 next_point_i = self.index(point.i+1,point.j)
                 new_pos = next_point_i.pos - self.width_1*point.e1
-            elif point.i>0:
+                point.update_pos(new_pos)
+
+                point = self.index(k,l+1-self.N)    #point.i>0
                 prev_point_i = self.index(point.i-1,point.j)
                 new_pos = prev_point_i.pos + self.width_1*prev_point_i.e1
-            elif point.i==0:
-                new_pos=point.pos
-            point.update_pos(new_pos)
+                point.update_pos(new_pos)
+        # for point in self.point_list:
+        #     if point.i<0:
+        #         next_point_i = self.index(point.i+1,point.j)
+        #         new_pos = next_point_i.pos - self.width_1*point.e1
+        #     elif point.i>0:
+        #         prev_point_i = self.index(point.i-1,point.j)
+        #         new_pos = prev_point_i.pos + self.width_1*prev_point_i.e1
+        #     elif point.i==0:
+        #         new_pos=point.pos
+        #     point.update_pos(new_pos)
+        ###########
         for point in self.point_list:
             point.update_unit_vector(self)
-        for point in self.point_list:
-            if point.j<0:
+
+        for k in range(1,self.N):
+            for l in range(self.size): 
+                point = self.index(l+1-self.N,-k)   #point.j<0
                 next_point_j = self.index(point.i,point.j+1)
                 new_pos = next_point_j.pos - self.width_2*point.e2
-            elif point.j>0:
+                point.update_pos(new_pos)
+
+                point = self.index(l+1-self.N,k)   #point.j>0
                 prev_point_j = self.index(point.i,point.j-1)
                 new_pos = prev_point_j.pos + self.width_2*prev_point_j.e2
-            elif point.j==0:
-                new_pos=point.pos
-            point.update_pos(new_pos)
+                point.update_pos(new_pos)
+        # for point in self.point_list:
+        #     if point.j<0:
+        #         next_point_j = self.index(point.i,point.j+1)
+        #         new_pos = next_point_j.pos - self.width_2*point.e2
+        #     elif point.j>0:
+        #         prev_point_j = self.index(point.i,point.j-1)
+        #         new_pos = prev_point_j.pos + self.width_2*prev_point_j.e2
+        #     elif point.j==0:
+        #         new_pos=point.pos
+        #     point.update_pos(new_pos)
+        ###########
         for point in self.point_list:
             point.update_unit_vector(self)
 

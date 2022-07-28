@@ -162,6 +162,12 @@ class Arm(object):
         print("thete: {}".format(self.theta))
         # time.sleep(0.1)
 
+    def add_model(self, model_name):
+        from data_collect.model import Model
+
+        model = Model.load(model_name)
+        model.end_effector = self.end_effector
+
     @property
     def base(self):
         return self._base
