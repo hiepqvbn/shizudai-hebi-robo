@@ -131,17 +131,26 @@ class Arm(object):
         line, = ax.plot(linx, liny, linz, style)
         return line
 
-    def input_pos(self, unit='deg'):
+    def input_pos(self, mode='num', unit='deg'):
         the = input("Input actuators' position(3--degree): ")
-        the1, the2, the3 = the.split()
-        if unit=='deg':
-            self._theta[0] = float(the1)*pi/180
-            self._theta[1] = float(the2)*pi/180
-            self._theta[2] = float(the3)*pi/180
-        elif unit=='rad':
-            self._theta[0] = float(the1)
-            self._theta[1] = float(the2)
-            self._theta[2] = float(the3)
+        if mode == 'num':
+            the1, the2, the3 = the.split()
+            if unit=='deg':
+                self._theta[0] = float(the1)*pi/180
+                self._theta[1] = float(the2)*pi/180
+                self._theta[2] = float(the3)*pi/180
+            elif unit=='rad':
+                self._theta[0] = float(the1)
+                self._theta[1] = float(the2)
+                self._theta[2] = float(the3)
+        elif mode=="key":
+            delta = 10**(-1)
+            delta_theta1 = the.count('q')*delta - the.count('a')*delta
+            delta_theta2 = the.count('w')*delta - the.count('s')*delta
+            delta_theta3 = the.count('e')*delta - the.count('d')*delta
+            self._theta[0] += delta_theta1
+            self._theta[1] += delta_theta2
+            self._theta[2] += delta_theta3
 
     def random_angles(self):
         ran_angles = np.random.random(3)#*2*pi  ###[0,2pi]
@@ -165,8 +174,9 @@ class Arm(object):
     def add_model(self, model_name):
         from data_collect.model import Model
 
-        model = Model.load(model_name)
-        model.end_effector = self.end_effector
+        self.model = Model.load(model_name)
+        # print(model.__dict__)
+        self.model.end_effector = self.theta     # Configuration place
 
     @property
     def base(self):
@@ -191,6 +201,15 @@ class Arm(object):
     @property
     def theta(self):
         return self._theta
+
+    @theta.setter
+    def theta(self, theta):
+        if len(theta)==3:
+            self._theta[0] = theta[0]
+            self._theta[1] = theta[1]
+            self._theta[2] = theta[2]
+        else:
+            print("Theta value is not on the right form!!!")
 
 
 class Cam(object):
@@ -270,7 +289,17 @@ class Cam(object):
         BETA = 0.8
         x = np.linspace(-self.w/2,self.w/2,10)
         y = ALPHA*x + BETA
+        self.ax.plot(x,y, 'r--')
+        #Danger line
+        BETA1 = -sqrt(ALPHA**2+1)*0.02 + BETA
+        x = np.linspace(-self.w/2,self.w/2,10)
+        y = ALPHA*x + BETA1
         self.ax.plot(x,y, 'y--')
+        #Safe line
+        BETA2 = -sqrt(ALPHA**2+1)*0.05 + BETA
+        x = np.linspace(-self.w/2,self.w/2,10)
+        y = ALPHA*x + BETA2
+        self.ax.plot(x,y, 'g--')
 
     def screen_xy(self, pos):
         """
@@ -302,11 +331,25 @@ class Cam(object):
         # print("Update homogeneous transformation matrix of camera;\n{}".format(self.T))
         self.update_arm()
 
-    def is_ee_on_boundary(self):
+    def ee_to_boundary(self):
         ALPHA = 6
         BETA = 0.8
         x,y=self.arm_on_screen[2]
         dis=np.abs(ALPHA*x-y+BETA)/sqrt(ALPHA**2+1)
+        return dis
+
+    def is_danger(self, danger=0.02):
+        x,y=self.arm_on_screen[2]
+        dis = self.ee_to_boundary()
+        if dis<danger and (x<self.w/2 and x>-self.w/2) and (y<self.h/2 and y>-self.h/2):
+            print("Dangerous zone !!!")
+            return True
+        else:
+            return False
+
+    def is_ee_on_boundary(self):
+        x,y=self.arm_on_screen[2]
+        dis = self.ee_to_boundary()
         if dis<EPS and (x<self.w/2 and x>-self.w/2) and (y<self.h/2 and y>-self.h/2):
             print("Arm's EE on the boudary {}".format(self.arm.theta))
             return True
@@ -351,12 +394,18 @@ if __name__=="__main__":
     cam.draw_arm()
     cam.update_draw()
 
-    arm.input_pos_from_csv("thetas27.csv")
+    # arm.input_pos_from_csv("thetas27.csv")
+
+    arm.add_model("model2022-07-28.mdl")
+    arm.model.show_model()
+    c_arm_plot, = arm.model.ax.plot(arm.theta[0], arm.theta[1], arm.theta[2], 'bD', markersize=12)
 
     count_loop = 0
     while True:
-        # arm.input_pos(unit='rad')
-        arm.update_pos_from_csv(count_loop)
+        # arm.input_pos(mode='key')
+        # print("Arm's angles {}".format(arm.theta))
+        arm.input_pos(unit='rad')
+        # arm.update_pos_from_csv(count_loop)
         # arm.random_angles()
         ########
         arm.update()
@@ -368,7 +417,46 @@ if __name__=="__main__":
         cam.update_draw()
         # time.sleep(5)
 
+        c_arm_plot.set_data_3d(arm.theta)
+
         count_loop +=1
+        if cam.is_danger():
+            from matplotlib.animation import FuncAnimation
+            ims1=[]
+            ims2=[]
+            ims3=[]
+            for grid in arm.model.grids:
+                nearest = min(grid.point_list, key=lambda point : np.linalg.norm(arm.theta-point.pos))
+                print(nearest)
+                #push back
+                delta = 0.01
+                while cam.is_danger(danger=0.05):
+                    arm.theta = arm.theta+nearest.e3*delta
+                    arm.update()
+                    #####
+                    arm.update_draw()
+                    ########
+                    cam.update_arm()
+                    #####
+                    cam.update_draw()
+                    c_arm_plot.set_data_3d(arm.theta)
+                    # time.sleep(0.1)
+
+                    ###########
+                    # print(cam.ax.findobj())
+                    # ax = cam.for_ani()
+                    # ims1.append(ax.findobj())
+
+            # ani1 = FuncAnimation(cam.fig,
+            #                     animate_plot,
+            #                     frames=3,
+            #                     interval=100)
+            # f1 = r"animation.gif" 
+            # writergif = animation.PillowWriter(fps=30) 
+            # ani1.save(f1, writer=writergif)    
+                    
+
+
         # if cam.is_ee_on_boundary():
         #     collect_data.write_data_to_dataframe(arm.theta)
         #     time.sleep(0.0001)

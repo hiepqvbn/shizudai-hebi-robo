@@ -393,16 +393,6 @@ class Grid(object):
                 prev_point_i = self.index(point.i-1,point.j)
                 new_pos = prev_point_i.pos + self.width_1*prev_point_i.e1
                 point.update_pos(new_pos)
-        # for point in self.point_list:
-        #     if point.i<0:
-        #         next_point_i = self.index(point.i+1,point.j)
-        #         new_pos = next_point_i.pos - self.width_1*point.e1
-        #     elif point.i>0:
-        #         prev_point_i = self.index(point.i-1,point.j)
-        #         new_pos = prev_point_i.pos + self.width_1*prev_point_i.e1
-        #     elif point.i==0:
-        #         new_pos=point.pos
-        #     point.update_pos(new_pos)
         ###########
         for point in self.point_list:
             point.update_unit_vector(self)
@@ -418,16 +408,6 @@ class Grid(object):
                 prev_point_j = self.index(point.i,point.j-1)
                 new_pos = prev_point_j.pos + self.width_2*prev_point_j.e2
                 point.update_pos(new_pos)
-        # for point in self.point_list:
-        #     if point.j<0:
-        #         next_point_j = self.index(point.i,point.j+1)
-        #         new_pos = next_point_j.pos - self.width_2*point.e2
-        #     elif point.j>0:
-        #         prev_point_j = self.index(point.i,point.j-1)
-        #         new_pos = prev_point_j.pos + self.width_2*prev_point_j.e2
-        #     elif point.j==0:
-        #         new_pos=point.pos
-        #     point.update_pos(new_pos)
         ###########
         for point in self.point_list:
             point.update_unit_vector(self)
