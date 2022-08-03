@@ -75,7 +75,7 @@ class DataVisual():
         self.fig.canvas.flush_events()
             
 
-    def scatter_plot3D(self, data, draw_samples=True, k=1): 
+    def scatter_plot3D(self, data, draw_samples=True, draw_grids=False, k=1): 
         x = data['J1_base']
         y = data['J2_shoulder']
         z = data['J3_elbow']
@@ -90,8 +90,9 @@ class DataVisual():
         self.ax.set_ylim([0,2*pi])
         self.ax.set_zlim([0,2*pi])
 
-        for j in range(k):
-            self.grids[j].draw(ax=self.ax)
+        if draw_grids:
+            for j in range(k):
+                self.grids[j].draw(ax=self.ax)
             
 
     def normalized_df(self, df):
