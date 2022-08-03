@@ -24,7 +24,7 @@ else:
 
 
 class DataVisual():
-    def __init__(self, csvfile=None, end_effector=None) -> None:
+    def __init__(self, csvfile=None, end_effector=None, k=1) -> None:
         self.fig = plt.figure(figsize=(12, 9))
         self.ax = Axes3D(self.fig)
         # self.canvas = agg.FigureCanvasAgg(self.fig)
@@ -37,7 +37,7 @@ class DataVisual():
             self.C_points = self.df[['J1_base','J2_shoulder','J3_elbow']]#.assign(Index=range(len(self.df))).set_index('Index')
             
             # K-means Clustering Algorithm
-            k=1 #clusters number
+            # k=1 #clusters number
             self.clustering(self.C_points, k)
 
             # Add k-means clustering label to Configuration Points Dataframe
@@ -86,9 +86,9 @@ class DataVisual():
         self.ax.set_ylabel('J2 Shoudler')
         self.ax.set_zlabel('J3 Elbow')
 
-        self.ax.set_xlim([0,pi])
-        self.ax.set_ylim([0,pi])
-        self.ax.set_zlim([-pi/2,pi/2])
+        self.ax.set_xlim([0,2*pi])
+        self.ax.set_ylim([0,2*pi])
+        self.ax.set_zlim([0,2*pi])
 
         for j in range(k):
             self.grids[j].draw(ax=self.ax)

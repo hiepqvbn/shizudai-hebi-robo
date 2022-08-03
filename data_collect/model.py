@@ -45,7 +45,7 @@ class Model():
     def train(self, csv_file, iteration=3, show_plot=False, show_samples=True, k=1):
 
         if csv_file:
-            self.visual = DataVisual(csvfile=csv_file, end_effector=self.end_effector)
+            self.visual = DataVisual(csvfile=csv_file, end_effector=self.end_effector, k=k)
 
         self.grids = self.visual.grids
         if iteration>0:

@@ -4,42 +4,42 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 if __name__=="__main__":
-    csvfile = pathlib.Path().absolute()/"datalog/datalog_sim2022-07-27.csv"
+    csvfile = pathlib.Path().absolute()/"datalog/datalog_sim2022-07-26.csv"
     end_effector = np.array([1.2, 1.3, 0.2])
     # plt.ion()
 
-    model = Model.load("model2022-07-28.mdl")
-    if model:
-        # print(model.grids[0].index(1,2))
+    # model = Model.load("model2022-07-28.mdl")
+    # if model:
+    #     # print(model.grids[0].index(1,2))
         
-        # e1,e2, e3 = model.grids[0].index(1,2).e1,model.grids[0].index(1,2).e2,model.grids[0].index(1,2).e3
-        # print(e2)
-        # e2 = np.cross(e1,e3)
+    #     # e1,e2, e3 = model.grids[0].index(1,2).e1,model.grids[0].index(1,2).e2,model.grids[0].index(1,2).e3
+    #     # print(e2)
+    #     # e2 = np.cross(e1,e3)
         
-        # print(e2)
-        # print(model.grids[0].index(1,2).components)
-        # print(np.dot(model.grids[0].index(1,2).e2,model.grids[0].index(1,2).e3))
-        from mpl_toolkits.mplot3d import Axes3D
+    #     # print(e2)
+    #     # print(model.grids[0].index(1,2).components)
+    #     # print(np.dot(model.grids[0].index(1,2).e2,model.grids[0].index(1,2).e3))
+    #     from mpl_toolkits.mplot3d import Axes3D
         
-        fig = plt.figure(figsize=(12, 9))
-        ax = Axes3D(fig)
-        from math import pi
-        ax.set_xlim([0,2])
-        ax.set_ylim([1.5,3.5])
-        ax.set_zlim([-1,1])
-        ax.set_xlabel('J1 Base')
-        ax.set_ylabel('J2 Shoudler')
-        ax.set_zlabel('J3 Elbow')
-        model.grids[0].draw(ax, should_show_pca=False, show_gridpoint_comps=True)
+    #     fig = plt.figure(figsize=(12, 9))
+    #     ax = Axes3D(fig)
+    #     from math import pi
+    #     ax.set_xlim([0,2])
+    #     ax.set_ylim([1.5,3.5])
+    #     ax.set_zlim([-1,1])
+    #     ax.set_xlabel('J1 Base')
+    #     ax.set_ylabel('J2 Shoudler')
+    #     ax.set_zlabel('J3 Elbow')
+    #     model.grids[0].draw(ax, should_show_pca=False, show_gridpoint_comps=True)
 
-        plt.show()
+    #     plt.show()
 
 
-    # model = Model(end_effector=end_effector)
-    # model.train(csv_file=csvfile, iteration=6, show_plot=True, show_samples=True)
+    model = Model(end_effector=end_effector)
+    model.train(csv_file=csvfile, iteration=0, show_plot=True, show_samples=True, k=6)
     # model.save(model)
-    # print("olk")
-    # plt.show()
+    print("olk")
+    plt.show()
 
 
 
