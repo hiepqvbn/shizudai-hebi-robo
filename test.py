@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 if __name__=="__main__":
-    csvfile = pathlib.Path().absolute()/"datalog/datalog_sim2022-07-26.csv"
+    csvfile = pathlib.Path().absolute()/"datalog/datalog_sim2022-07-27.csv"
     end_effector = np.array([1.2, 1.3, 0.2])
     # plt.ion()
 
@@ -36,7 +36,7 @@ if __name__=="__main__":
 
 
     model = Model(end_effector=end_effector)
-    model.train(csv_file=csvfile, iteration=0, show_plot=True, show_samples=True, k=6)
+    model.train(csv_file=csvfile, iteration=0, show_plot=True, show_samples=True, k=1)
     # model.save(model)
     print("olk")
     plt.show()

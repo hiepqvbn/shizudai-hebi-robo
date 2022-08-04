@@ -86,9 +86,9 @@ class DataVisual():
         self.ax.set_ylabel('J2 Shoudler')
         self.ax.set_zlabel('J3 Elbow')
 
-        self.ax.set_xlim([0,2*pi])
-        self.ax.set_ylim([0,2*pi])
-        self.ax.set_zlim([0,2*pi])
+        self.ax.set_xlim([0,2])
+        self.ax.set_ylim([1.5,3.5])
+        self.ax.set_zlim([-1,1])
 
         if draw_grids:
             for j in range(k):
