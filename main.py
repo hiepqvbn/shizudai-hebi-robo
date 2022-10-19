@@ -40,7 +40,7 @@ def main():
     import threading
     from Arm import pygame_GUI
     from data_collect import data_collect
-    from computer_vision import realsense_depth, detect_blue_mark
+    # from computer_vision import realsense_depth, detect_blue_mark
     from data_collect.model import Model
     import pathlib
     import numpy as np
