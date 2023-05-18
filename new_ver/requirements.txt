@@ -1,0 +1,9 @@
+hebi-py
+pygame==2.1.2
+numpy
+matplotlib
+xbox360controller
+pandas
+pyrealsense2
+opencv-python
+scikit-learn
