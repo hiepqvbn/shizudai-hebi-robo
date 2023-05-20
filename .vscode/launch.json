@@ -1,0 +1,13 @@
+{
+    "version": "auto",
+    "configurations": [
+      {
+        "name": "Python: Current File",
+        "type": "python",
+        "request": "launch",
+        "program": "${file}",
+        "cwd": "${workspaceFolder}/new_ver"
+      }
+    ]
+  }
+  
