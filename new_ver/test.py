@@ -26,7 +26,7 @@ def run_tests():
 
     # Add more test cases as needed
 
-    main()
+    main(False)
 
 
 # Execute the test cases

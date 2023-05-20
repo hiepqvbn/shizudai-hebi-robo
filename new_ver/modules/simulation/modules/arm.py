@@ -1,11 +1,10 @@
 import numpy as np
-from mpl_toolkits.mplot3d import Axes3D
 from .utils import rotate_transform, DH_transform
 from math import pi
 
 
 class Arm(object):
-    def __init__(self, fig, base=np.zeros(3, dtype=np.float16), l1=1, l2=1) -> None:
+    def __init__(self, base=np.zeros(3, dtype=np.float16), l1=1, l2=1) -> None:
         self._base = base
         self._l1 = l1
         self._l2 = l2
@@ -16,19 +15,6 @@ class Arm(object):
         self._elbow = np.zeros(3)
         self.update()
 
-        self.fig = fig
-        self.ax = Axes3D(self.fig)
-
-        self.fig.suptitle("3DoF Arm")
-
-        self.ax.set_xlabel('X')
-        self.ax.set_ylabel('Y')
-        self.ax.set_zlabel('Z')
-
-        self.ax.set_xlim([-1, self.base[0]+2])
-        self.ax.set_ylim([-1, self.base[1]+2])
-        self.ax.set_zlim([-1, self.base[2]+2])
-
     def update(self):
         self.update_DH_matrix()
         self.update_end_effector()
@@ -36,10 +22,14 @@ class Arm(object):
         # print("theta {}".format(self.theta))
         # print("end effector {}".format(self.end_effector))
 
+    def visualize(self, ax):
+        self.ax = ax
+        self.draw_arm()
+
     def update_draw(self):
-        self.base_point.set_data_3d(self.base)
-        self.elbow_point.set_data_3d(self.elbow)
-        self.end_effector_point.set_data_3d(self.end_effector)
+        self.base_point.set_data_3d([self.base[0]],[self.base[1]],[self.base[2]])
+        self.elbow_point.set_data_3d([self.elbow[0]],[self.elbow[1]],[self.elbow[2]])
+        self.end_effector_point.set_data_3d([self.end_effector[0]],[self.end_effector[1]],[self.end_effector[2]])
 
         p1 = self.base
         p2 = self.elbow
@@ -50,8 +40,6 @@ class Arm(object):
         linx, liny, linz = [p1[0], p2[0]], [p1[1], p2[1]], [p1[2], p2[2]]
         self.line2.set_data_3d(linx, liny, linz)
 
-        self.fig.canvas.draw()
-        self.fig.canvas.flush_events()
 
     # theta = {theta1, theta2, theta3} must be np.array(3)
     def update_DH_matrix(self):
@@ -135,7 +123,6 @@ class Arm(object):
         # time.sleep(0.1)
 
     def add_model(self, model):
-        
 
         self.model = model
         # print(model.__dict__)

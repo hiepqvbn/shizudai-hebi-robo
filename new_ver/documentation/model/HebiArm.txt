@@ -1,0 +1,7 @@
+We used the 5DoF Hebi Robot Arm
+1. Base
+2. Shoulder
+3. Elbow
+-> End effector
+4. Wrist
+5. Grip

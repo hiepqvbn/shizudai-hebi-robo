@@ -2,9 +2,11 @@ import numpy as np
 from .utils import rotate_transform
 from math import sqrt
 
+EPS = 1*10**(-4)
+
 
 class Cam(object):
-    def __init__(self, arm, fig, ax, cam_angle=np.array([0, 0, 0], dtype=np.float16), w=640, h=480, f=0.5, pos=np.array([0, 0, 0], dtype=np.float16)) -> None:
+    def __init__(self, arm, cam_angle=np.array([0, 0, 0], dtype=np.float16), w=640, h=480, f=0.5, pos=np.array([0, 0, 0], dtype=np.float16)) -> None:
         self.w = w*10**(-3)
         self.h = h*10**(-3)
         self.arm = arm
@@ -21,12 +23,21 @@ class Cam(object):
         # Transform Arm to screen
         self.update_arm()
 
+    def visualize_in_env(self, env_ax):
+        self.env_ax = env_ax
+        self.draw_cam_in_env()
+
+    def visualize(self, plt):
+        self.plt = plt
         # matplotlib camera screen
-        self.fig, self.ax = fig, ax
+        self.fig, self.ax = self.plt.subplots()
         self.ax.set_title("Camera Screen")
 
         self.ax.set_xlim([-self.w/2, self.w/2])
         self.ax.set_ylim([-self.h/2, self.h/2])
+
+        self.draw_arm()
+        self.draw_boundary()
 
     def update_arm(self):
         # print("rotate matrix {}".format(np.linalg.inv(self.T)))
@@ -39,7 +50,7 @@ class Cam(object):
         self.arm_on_screen[0] = self.screen_xy(base)
         self.arm_on_screen[1] = self.screen_xy(elbow)
         self.arm_on_screen[2] = self.screen_xy(end_effector)
-        # print("arm on screen:\n {}".format(self.arm_on_screen))
+        # print(f'{self.arm_on_screen=}')
 
     def update_draw(self):
         self.base_point.set_data(self.arm_on_screen[0])
@@ -59,8 +70,8 @@ class Cam(object):
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
 
-    def draw_cam(self):
-        self.arm.ax.plot(
+    def draw_cam_in_env(self):
+        self.env_ax.plot(
             self.position[0], self.position[1], self.position[2], 'yD', markersize=12)
 
     def draw_arm(self):
