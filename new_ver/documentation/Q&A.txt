@@ -1,0 +1,3 @@
+1.
+Q: After getting the data, how to change the data to the grid character
+A: 
