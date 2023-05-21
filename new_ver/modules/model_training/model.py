@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pathlib
 import time
+import pickle
 
 from modules.visualization.data_visualization import *
 
@@ -67,15 +68,6 @@ class Model():
     def copy(self, model):
         self.grids = model.grids
 
-    def save(self, model):
-        import pickle
-        from datetime import date
-        filename = "model{}.mdl".format(date.today())
-        _model = Model(end_effector=model.end_effector, forsave=True)
-        _model.copy(model)
-        with open(filename, 'wb') as outp:
-            pickle.dump(_model, outp, pickle.HIGHEST_PROTOCOL)
-
     @property
     def end_effector(self):
         return self._end_effector
@@ -87,15 +79,20 @@ class Model():
         else:
             print("Wrong type of data")
 
-    @classmethod
-    def load(cls, model_file):
-        import pickle
-        import os
-        print(os.getcwd())
 
-        with open(model_file, "rb") as file_to_read:
-            loaded_object = pickle.load(file_to_read)
-        return loaded_object
+def load_model(model_file_path):
+
+    with open(model_file_path, "rb") as file_to_read:
+        loaded_object = pickle.load(file_to_read)
+    return loaded_object
+
+
+def save_model(model, file_path=None):
+
+    if not file_path:
+        file_path = f'models/model{date.today()}.mdl'
+    with open(file_path, 'wb') as outp:
+        pickle.dump(model, outp, pickle.HIGHEST_PROTOCOL)
 
 
 if __name__ == "__main__":
