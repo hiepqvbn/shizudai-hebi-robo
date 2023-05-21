@@ -100,7 +100,7 @@ class Simulation:
                 arm.update()
                 cam.update_arm()
 
-    def main(self, visualize=True):
+    def main(self, visualize=True, mode=None):
         self.data_collector = SimulationDataCollector(
             cols=['J1_base', 'J2_shoulder', 'J3_elbow'])
 

@@ -6,7 +6,7 @@ import signal
 # from pygame_GUI import pygameGUI
 from xbox360controller import Xbox360Controller
 import multiprocessing as mp
-from Arm.hebi_arm import RobotArm
+from arm.arm_control.controller.modules.hebi_arm import RobotArm
 
 
 class Controller(Xbox360Controller):

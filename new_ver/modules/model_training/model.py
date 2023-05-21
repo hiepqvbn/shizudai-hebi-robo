@@ -11,9 +11,8 @@ from modules.visualization.data_visualization import *
 class Model():
     SPEED = 0.01
 
-    def __init__(self, end_effector, forsave=False) -> None:
-        self._end_effector = end_effector
-        self.forsave = forsave
+    def __init__(self, C_space_arm_pos) -> None:
+        self._C_space_arm_pos = C_space_arm_pos
 
     def show_model(self, show_gridpoint_comps=True):
         from mpl_toolkits.mplot3d import Axes3D
@@ -33,22 +32,22 @@ class Model():
 
         plt.show()
 
-    def cal_next_position(self, pos):
-        delta = pos-self.end_effector
+    def predict_next_pos(self, pos):
+        delta = pos-self.C_space_arm_pos
         gradient = self.grid.grad_potential_energy(pos)
         print("Gradient is {}".format(gradient))
-        next_position = self.end_effector + \
+        next_position = self.C_space_arm_pos + \
             delta-gradient*(delta/self.SPEED)**2/2
         print("Next position is {}".format(next_position))
         for i in range(3):
-            self.end_effector[i] = next_position[i]
+            self.C_space_arm_pos[i] = next_position[i]
         return next_position
 
     def train(self, csv_file, iteration=3, show_plot=False, show_samples=True, k=1):
 
         if csv_file:
             self.visual = DataVisual(
-                csvfile=csv_file, end_effector=self.end_effector, k=k)
+                csvfile=csv_file, C_space_arm_pos=self.C_space_arm_pos, k=k)
 
         self.grids = self.visual.grids
         if iteration > 0:
@@ -69,13 +68,14 @@ class Model():
         self.grids = model.grids
 
     @property
-    def end_effector(self):
-        return self._end_effector
+    def C_space_arm_pos(self):
+        return self._C_space_arm_pos
 
-    @end_effector.setter
-    def end_effector(self, ee):
-        if ee.shape == (3,):
-            self._end_effector = ee
+    @C_space_arm_pos.setter
+    def C_space_arm_pos(self, C_space_arm_pos):
+        #TODO this time the arm just using 3 actuators, 
+        if C_space_arm_pos.shape == (3,): 
+            self._C_space_arm_pos = C_space_arm_pos
         else:
             print("Wrong type of data")
 
@@ -97,7 +97,7 @@ def save_model(model, file_path=None):
 
 if __name__ == "__main__":
     csvfile = pathlib.Path().absolute()/"datalog_sim2022-07-26.csv"
-    end_effector = np.array([1.2, 1.3, 0.2])
-    model = Model(end_effector=end_effector)
+    C_space_arm_pos = np.array([1.2, 1.3, 0.2])
+    model = Model(C_space_arm_pos=C_space_arm_pos)
     model.train(csv_file=csvfile, show_plot=True)
     print("ok run in model.py")

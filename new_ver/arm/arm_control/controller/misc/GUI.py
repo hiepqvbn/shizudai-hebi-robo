@@ -2,7 +2,7 @@ import tkinter as tk
 import hebi
 from time import sleep
 import numpy as np
-from hebi_arm import RobotArm
+from new_ver.arm.arm_control.controller.modules.hebi_arm import RobotArm
 import threading
 
 

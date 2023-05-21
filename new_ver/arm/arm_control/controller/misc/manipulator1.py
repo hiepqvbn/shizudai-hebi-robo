@@ -1,6 +1,6 @@
 import numpy as np
 from math import cos, sin
-import glb_
+import new_ver.arm.arm_control.controller.misc.glb_ as glb_
 
 def manipulator1(q, qdot, tau):
 
